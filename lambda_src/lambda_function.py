@@ -38,7 +38,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.debug(f'async_flow_init() received destination: {destination}.')
 
     destination_driver = import_module(
-        f'drivers.destination_{urlparse(destination).scheme}'
+        f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
     # Ignoring style due to dynamic import
     destination_driver.initialize(destination, batch_id)  # type: ignore
@@ -67,7 +67,7 @@ def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
     """
     LOG.debug('async_flow_poll() called as destination header was not found in a GET.')
     destination_driver = import_module(
-        f'drivers.destination_{urlparse(destination).scheme}'
+        f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
 
     # Ignoring style due to dynamic import
@@ -102,7 +102,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     if write_uri:
         destination_driver = import_module(
-            f'drivers.destination_{urlparse(write_uri).scheme}'
+            f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
     res_data = []
 
@@ -117,7 +117,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         try:
             driver, *path = event['path'].lstrip('/').split('/')
             driver = driver.replace('-', '_')
-            driver_module = f'drivers.process_{driver}'
+            driver_module = f'geff.drivers.process_{driver}'
             process_row = import_module(
                 driver_module, package=None
             ).process_row  # type: ignore
