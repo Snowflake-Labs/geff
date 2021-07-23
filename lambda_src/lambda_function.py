@@ -6,7 +6,7 @@ from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
-from .utils import LOG, create_response, format, invoke_process_lambda, zip
+from utils import LOG, create_response, format, invoke_process_lambda, zip
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
