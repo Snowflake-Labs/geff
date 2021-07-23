@@ -6,6 +6,6 @@ The Generic External Function Framework (GEFF) is extensible Python Lambda code 
 
 - [x] Lambda base code
 - [x] Basic tests needs environment variables to be set
-- [] Use mocks to simulate remote services and test all drivers
-- [] Test async functionality
-- [] Use moto for mocking boto3 and test s3 destination drivers
+- [ ] Use mocks to simulate remote services and test all drivers
+- [ ] Test async functionality
+- [ ] Use moto for mocking boto3 and test s3 destination drivers
