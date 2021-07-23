@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
-from utils import LOG
+from ..utils import LOG
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
