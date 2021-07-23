@@ -8,8 +8,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl
 from urllib.request import Request, urlopen
 
-from utils import LOG, parse_header_links, pick
-from vault import decrypt_if_encrypted
+from ..utils import LOG, parse_header_links, pick
+from ..vault import decrypt_if_encrypted
 
 
 def make_basic_header(auth):

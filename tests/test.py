@@ -3,7 +3,7 @@ from json import loads
 from os import environ
 from urllib.parse import urlencode
 
-from lambda_function import lambda_handler
+from lambda_src.lambda_function import lambda_handler
 
 
 def test_greathorn():
