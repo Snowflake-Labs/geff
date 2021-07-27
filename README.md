@@ -4,6 +4,26 @@ The Generic External Function Framework (GEFF) is extensible Python Lambda code 
 
 ## Instructions
 
+### To use using terraform
+
+Below is an example as used in[ `terraform-snowflake-aws-geff`](https://github.com/Snowflake-Labs/terraform-snowflake-aws-geff):
+
+NOTE: The handler is provided a module as opposed to just `lambda_function.lambda_handler`
+
+```hcl
+resource "aws_lambda_function" "geff_lambda" {
+  function_name    = local.lambda_function_name
+  role             = aws_iam_role.geff_lambda_assume_role.arn
+  handler          = "geff.lambda_function.lambda_handler"
+  memory_size      = "4096" # 4 GB
+  runtime          = local.runtime
+  timeout          = "900" # 15 mins
+  publish          = null
+  filename         = data.archive_file.lambda_code.output_path
+  source_code_hash = data.archive_file.lambda_code.output_base64sha256
+}
+```
+
 ### Setup
 
 ```bash
