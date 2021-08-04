@@ -78,6 +78,10 @@ def process_row(
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
+        elif 'Key' in req_auth:
+            req_headers['Key'] = req_auth['Key']
+        elif 'headers' in req_auth:
+            req_headers.update(req_auth['headers'])
 
     # query, nextpage_path, results_path
     req_params: str = params
