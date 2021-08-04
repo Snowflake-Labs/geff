@@ -149,7 +149,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             write_uri, batch_id, res_data
         )
     else:
-        data_dumps = dumps({'data': res_data})
+        data_dumps = dumps({'data': res_data}, default=str)
         response = {'statusCode': 200, 'body': data_dumps}
 
     if len(response) > 6_000_000:

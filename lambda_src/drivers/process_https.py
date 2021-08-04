@@ -1,7 +1,7 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, loads
+from json import JSONDecodeError, dumps, load, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
@@ -47,11 +47,13 @@ def process_row(
         req_path = url or '/'
 
     req_kwargs = parse_header_dict(kwargs)
-
-    req_headers = {
-        k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()
-    }
-    req_headers.setdefault('User-Agent', 'Snowflake Generic External Function 1.0')
+    if headers.startswith('{'):
+        req_headers = loads(headers)
+    else:
+        req_headers = {
+            k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()
+        }
+    req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
     if auth is not None:
@@ -95,7 +97,9 @@ def process_row(
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
+    LOG.debug(f'Headers: {req_headers}')
     LOG.debug('Starting pagination.')
+
     while next_url:
         LOG.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
