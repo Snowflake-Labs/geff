@@ -1,7 +1,7 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, load, loads
+from json import JSONDecodeError, dumps, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
@@ -44,15 +44,16 @@ def process_row(
             raise RuntimeError('url must start with https://')
     else:
         req_host = base_url
-        req_path = url or '/'
 
     req_kwargs = parse_header_dict(kwargs)
-    if headers.startswith('{'):
-        req_headers = loads(headers)
-    else:
-        req_headers = {
-            k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()
-        }
+    req_headers = (
+        loads(headers)
+        if headers.startswith('{')
+        else {k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()}
+        if headers
+        else {}
+    )
+
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
@@ -78,10 +79,6 @@ def process_row(
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
-        elif 'Key' in req_auth:
-            req_headers['Key'] = req_auth['Key']
-        elif 'headers' in req_auth:
-            req_headers.update(req_auth['headers'])
 
     # query, nextpage_path, results_path
     req_params: str = params
