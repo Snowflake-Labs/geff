@@ -46,13 +46,16 @@ def process_row(
         req_host = base_url
 
     req_kwargs = parse_header_dict(kwargs)
-    req_headers = (
-        loads(headers)
-        if headers.startswith('{')
-        else {k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()}
-        if headers
-        else {}
-    )
+    req_headers = {
+        k: v.format(**req_kwargs)
+        for k, v in (
+            loads(headers)
+            if headers.startswith('{')
+            else parse_header_dict(headers)
+            if headers
+            else {}
+        ).items()
+    }
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
