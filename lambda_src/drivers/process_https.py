@@ -1,7 +1,7 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, load, loads
+from json import JSONDecodeError, dumps, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
@@ -36,7 +36,7 @@ def process_row(
     destination_uri: Text = '',
 ):
     if url:
-        req_url = base_url + url
+        req_url = url if url.startswith(base_url) else base_url + url
         m = match(r'^https://([^/]+)(.*)$', req_url)
         if m:
             req_host, req_path = m.groups()
