@@ -103,7 +103,7 @@ def write(
     encoded_datum = (
         '\n'.join(json.dumps(d) for d in datum)
         if isinstance(datum, list)
-        else json.dumps(datum)
+        else json.dumps(datum, default=str)
     )
 
     if not prefix:

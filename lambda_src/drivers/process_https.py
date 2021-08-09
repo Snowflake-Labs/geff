@@ -1,7 +1,7 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, loads
+from json import JSONDecodeError, dumps, load, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
@@ -44,14 +44,20 @@ def process_row(
             raise RuntimeError('url must start with https://')
     else:
         req_host = base_url
-        req_path = url or '/'
 
     req_kwargs = parse_header_dict(kwargs)
-
     req_headers = {
-        k: v.format(**req_kwargs) for k, v in parse_header_dict(headers).items()
+        k: v.format(**req_kwargs)
+        for k, v in (
+            loads(headers)
+            if headers.startswith('{')
+            else parse_header_dict(headers)
+            if headers
+            else {}
+        ).items()
     }
-    req_headers.setdefault('User-Agent', 'Snowflake Generic External Function 1.0')
+
+    req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
     if auth is not None:
@@ -76,6 +82,8 @@ def process_row(
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
+        elif 'headers' in req_auth:
+            req_headers.update(req_auth['headers'])
 
     # query, nextpage_path, results_path
     req_params: str = params
@@ -96,6 +104,7 @@ def process_row(
     row_data: List[Any] = []
 
     LOG.debug('Starting pagination.')
+
     while next_url:
         LOG.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
