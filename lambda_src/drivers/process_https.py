@@ -148,7 +148,7 @@ def process_row(
             response_body = (
                 decompress(res.read())
                 if res.headers.get('Content-Encoding') == 'gzip'
-                else res.read()
+                else res.read().decode()
             )
 
             content_type = e.headers.get('Content-Type')
