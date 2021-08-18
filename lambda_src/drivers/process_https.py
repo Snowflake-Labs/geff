@@ -36,7 +36,7 @@ def process_row(
     destination_uri: Text = '',
 ):
     if url:
-        req_url = base_url + url
+        req_url = url if url.startswith(base_url) else base_url + url
         m = match(r'^https://([^/]+)(.*)$', req_url)
         if m:
             req_host, req_path = m.groups()
