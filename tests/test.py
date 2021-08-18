@@ -164,10 +164,10 @@ def test_email():
 
 
 def test_okta():
-    h = 'https://' + environ.get('OKTA_DEV_HOST')
+    h = 'https://' + environ.get('OKTA_DEV_HOST', '')
     k = environ.get('OKTA_DEV_APIKEY')
 
-    if k and k:
+    if h != 'https://' and k:
         result = lambda_handler(
             {
                 'path': '/https',
@@ -181,7 +181,6 @@ def test_okta():
                 'body': '{"data": [[0, "/api/v1/users", ""]]}',
             }
         )
-        LOG.debug(result['body'])
         assert len(loads(result['body'])['data'][0][1]) > 200
 
 
