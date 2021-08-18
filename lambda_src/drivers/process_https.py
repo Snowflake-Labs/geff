@@ -145,9 +145,11 @@ def process_row(
             )
             result = pick(req_results_path, response)
         except HTTPError as e:
-            raw_response_body = res.read()
-            if res.headers.get('Content-Encoding') == 'gzip':
-                raw_response_body = decompress(raw_response_body)
+            response_body = (
+                decompress(res.read())
+                if res.headers.get('Content-Encoding') == 'gzip'
+                else res.read()
+            )
 
             content_type = e.headers.get('Content-Type')
             result = {
@@ -156,7 +158,7 @@ def process_row(
                 'status': e.code,
                 'reason': e.reason,
                 'body': (
-                    loads(raw_response_body)
+                    loads(response_body)
                     if content_type.startswith('application/json')
                     else response_body
                 ),
