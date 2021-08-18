@@ -1,7 +1,7 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, load, loads
+from json import JSONDecodeError, dumps, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
@@ -99,12 +99,13 @@ def process_row(
     else:
         req_data = None if data is None else data.encode()
 
-    req_url += f'?{req_params}'
+    if req_params:
+        req_url += f'?{req_params}'
+
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
     LOG.debug('Starting pagination.')
-
     while next_url:
         LOG.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
@@ -144,7 +145,10 @@ def process_row(
             )
             result = pick(req_results_path, response)
         except HTTPError as e:
-            response_body = e.read().decode()
+            raw_response_body = res.read()
+            if res.headers.get('Content-Encoding') == 'gzip':
+                raw_response_body = decompress(raw_response_body)
+
             content_type = e.headers.get('Content-Type')
             result = {
                 'error': 'HTTPError',
@@ -152,7 +156,7 @@ def process_row(
                 'status': e.code,
                 'reason': e.reason,
                 'body': (
-                    loads(response_body)
+                    loads(raw_response_body)
                     if content_type.startswith('application/json')
                     else response_body
                 ),
