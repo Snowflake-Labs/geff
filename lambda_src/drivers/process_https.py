@@ -145,7 +145,11 @@ def process_row(
             )
             result = pick(req_results_path, response)
         except HTTPError as e:
-            response_body = e.read().decode()
+            response_body = (
+                decompress(res.read())
+                if res.headers.get('Content-Encoding') == 'gzip'
+                else res.read()
+            ).decode()
             content_type = e.headers.get('Content-Type')
             result = {
                 'error': 'HTTPError',
