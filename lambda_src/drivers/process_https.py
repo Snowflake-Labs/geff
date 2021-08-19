@@ -147,7 +147,7 @@ def process_row(
         except HTTPError as e:
             response_body = (
                 decompress(e.read())
-                if res.headers.get('Content-Encoding') == 'gzip'
+                if e.headers.get('Content-Encoding') == 'gzip'
                 else e.read()
             ).decode()
             content_type = e.headers.get('Content-Type')
