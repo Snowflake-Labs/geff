@@ -37,7 +37,15 @@ def process_row(
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
-    req_url = base_url if not url else url if url.startswith(base_url) else base_url + url
+    req_url = (
+        base_url
+        if not url
+        else (
+            url
+            if url.startswith(base_url)
+            else base_url + url
+        )
+    )
 
     u = urlparse(req_url)
     if u.scheme != 'https':
@@ -50,9 +58,11 @@ def process_row(
         for k, v in (
             loads(headers)
             if headers.startswith('{')
-            else parse_header_dict(headers)
-            if headers
-            else {}
+            else (
+                parse_header_dict(headers)
+                if headers
+                else {}
+            )
         ).items()
     }
 
@@ -65,9 +75,11 @@ def process_row(
         req_auth = (
             loads(auth)
             if auth.startswith('{')
-            else parse_header_dict(auth)
-            if auth
-            else {}
+            else (
+                parse_header_dict(auth)
+                if auth
+                else {}
+            )
         )
 
         if 'host' in req_auth and not req_host:
