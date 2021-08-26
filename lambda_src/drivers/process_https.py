@@ -5,7 +5,7 @@ from json import JSONDecodeError, dumps, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 from ..utils import LOG, parse_header_links, pick
@@ -37,15 +37,10 @@ def process_row(
 ):
     if url:
         req_url = url if url.startswith(base_url) else base_url + url
-        m = match(r'^https://([^/]+)(.*)$', req_url)
-        if m:
-            req_host, req_path = m.groups()
-        else:
-            raise RuntimeError('url must start with https://')
     else:
-        req_host = base_url
         req_url = base_url
 
+    req_host = urlparse(req_url).hostname
     req_kwargs = parse_header_dict(kwargs)
     req_headers = {
         k: v.format(**req_kwargs)
