@@ -35,12 +35,15 @@ def process_row(
     results_path: Text = '',
     destination_uri: Text = '',
 ):
-    if url:
-        req_url = url if url.startswith(base_url) else base_url + url
-    else:
-        req_url = base_url
+    if not base_url and not url:
+        raise ValueError('Missing required parameter. Need one of url or base-url.')
+    req_url = base_url if not url else url if url.startswith(base_url) else base_url + url
 
-    req_host = urlparse(req_url).hostname
+    u = urlparse(req_url)
+    if u.scheme != 'https':
+        raise ValueError('URL scheme must be HTTPS.')
+
+    req_host = u.hostname
     req_kwargs = parse_header_dict(kwargs)
     req_headers = {
         k: v.format(**req_kwargs)
