@@ -44,6 +44,7 @@ def process_row(
             raise RuntimeError('url must start with https://')
     else:
         req_host = base_url
+        req_url = base_url
 
     req_kwargs = parse_header_dict(kwargs)
     req_headers = {
