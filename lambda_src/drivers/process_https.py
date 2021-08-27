@@ -37,6 +37,7 @@ def process_row(
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
+
     req_url = (
         base_url
         if not url

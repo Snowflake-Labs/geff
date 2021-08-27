@@ -23,7 +23,7 @@ def process_row(
             loads(decrypt_if_encrypted(authorized_user_info)), scopes
         )
     else:
-        c = service_account.Credentials.from_service_account_info( # asdf
+        c = service_account.Credentials.from_service_account_info(
             loads(decrypt_if_encrypted(service_account_info))
         )
         if subject is None or without_subject:
