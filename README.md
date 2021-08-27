@@ -37,10 +37,14 @@ pip install -r requirements-dev.txt
 ```
 
 ### Test
-
 ```bash
 # While in the venv
 python -m pytest tests/*
+```
+
+### Creating a zip archive
+```bash
+make pack
 ```
 
 ## TODO
