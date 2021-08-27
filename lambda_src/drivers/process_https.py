@@ -41,11 +41,9 @@ def process_row(
     req_url = (
         base_url
         if not url
-        else (
-            url
-            if url.startswith(base_url)
-            else base_url + url
-        )
+        else url
+        if url.startswith(base_url)
+        else base_url + url
     )
 
     u = urlparse(req_url)
@@ -76,11 +74,9 @@ def process_row(
         req_auth = (
             loads(auth)
             if auth.startswith('{')
-            else (
-                parse_header_dict(auth)
-                if auth
-                else {}
-            )
+            else parse_header_dict(auth)
+            if auth
+            else {}
         )
 
         if 'host' in req_auth and not req_host:
