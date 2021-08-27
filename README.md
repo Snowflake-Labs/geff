@@ -10,7 +10,7 @@ The Generic External Function Framework (GEFF) is a generic backend for [Snowfla
 
 Below is an example as used in [`terraform-snowflake-aws-geff`](https://github.com/Snowflake-Labs/terraform-snowflake-aws-geff):
 
-NOTE: The handler is provided a module as opposed to just `lambda_function.lambda_handler`
+NOTE: The handler is `geff.lambda_function.lambda_handler` as opposed to the default `lambda_function.lambda_handler`. We're invoking GEFF as a package.
 
 ```hcl
 resource "aws_lambda_function" "geff_lambda" {
