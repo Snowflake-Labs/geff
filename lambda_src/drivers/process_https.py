@@ -187,12 +187,13 @@ def process_row(
                 cursor_param = cursor_path.split('.')[-1]
             cursor_value = pick(cursor_path, response)
 
-            if cursor_value.startswith('https://'):
-                next_url = cursor_value
-            else:
-                next_url = (
-                    f'{req_url}&{cursor_param}={cursor_value}' if cursor_value else None
-                )
+            next_url = (
+                cursor_value
+                if cursor_value.startswith('https://')
+                else f'{req_url}&{cursor_param}={cursor_value}'
+                if cursor_value
+                else None
+            )
         elif links_headers and isinstance(result, list):
             row_data += result
             link_dict: Dict[Any, Any] = next(
