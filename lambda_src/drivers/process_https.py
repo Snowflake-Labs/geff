@@ -179,15 +179,17 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-            if req_cursor.startswith('https://'):
-                next_url = req_cursor
+  
+            if ':' in req_cursor:
+                cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
-                if ':' in req_cursor:
-                    cursor_path, cursor_param = req_cursor.rsplit(':', 1)
-                else:
-                    cursor_path = req_cursor
-                    cursor_param = cursor_path.split('.')[-1]
-                cursor_value = pick(cursor_path, response)
+                cursor_path = req_cursor
+                cursor_param = cursor_path.split('.')[-1]
+            cursor_value = pick(cursor_path, response)
+
+            if cursor_value.startswith('https://'):
+                next_url = cursor_value
+            else:
                 next_url = (
                     f'{req_url}&{cursor_param}={cursor_value}' if cursor_value else None
                 )
