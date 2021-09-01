@@ -179,15 +179,18 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-            if ':' in req_cursor:
-                cursor_path, cursor_param = req_cursor.rsplit(':', 1)
+            if cursor.startswith(req_cursor):
+                next_url = req_cursor
             else:
-                cursor_path = req_cursor
-                cursor_param = cursor_path.split('.')[-1]
-            cursor_value = pick(cursor_path, response)
-            next_url = (
-                f'{req_url}&{cursor_param}={cursor_value}' if cursor_value else None
-            )
+                if ':' in req_cursor:
+                    cursor_path, cursor_param = req_cursor.rsplit(':', 1)
+                else:
+                    cursor_path = req_cursor
+                    cursor_param = cursor_path.split('.')[-1]
+                cursor_value = pick(cursor_path, response)
+                next_url = (
+                    f'{req_url}&{cursor_param}={cursor_value}' if cursor_value else None
+                )
         elif links_headers and isinstance(result, list):
             row_data += result
             link_dict: Dict[Any, Any] = next(
