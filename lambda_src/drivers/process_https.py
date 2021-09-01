@@ -185,11 +185,12 @@ def process_row(
             else:
                 cursor_path = req_cursor
                 cursor_param = cursor_path.split('.')[-1]
+
             cursor_value = pick(cursor_path, response)
 
             next_url = (
                 cursor_value
-                if cursor_value.startswith('https://')
+                if cursor_value and cursor_value.startswith('https://')
                 else f'{req_url}&{cursor_param}={cursor_value}'
                 if cursor_value
                 else None
