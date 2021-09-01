@@ -179,7 +179,7 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-            if cursor.startswith(req_cursor):
+            if cursor.startswith('https://'):
                 next_url = req_cursor
             else:
                 if ':' in req_cursor:
