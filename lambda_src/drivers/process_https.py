@@ -50,11 +50,9 @@ def process_row(
         for k, v in (
             loads(headers)
             if headers.startswith('{')
-            else (
-                parse_header_dict(headers)
-                if headers
-                else {}
-            )
+            else parse_header_dict(headers)
+            if headers
+            else {}
         ).items()
     }
 
