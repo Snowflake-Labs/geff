@@ -7,16 +7,16 @@
 
 pack:
 	# 1. create directory
-	mkdir -p ./lambda_archive/site-packages/
+	mkdir -p ./geff/site-packages/
 
 	# 2. Install the packages into site-packages
-	pip install -r ./requirements.txt --target ./lambda_archive/site-packages/ --upgrade
+	pip install -r ./requirements.txt --target ./geff/site-packages/ --upgrade
 
 	# 3. copy stuff inside
-	rsync -aP ./lambda_src/* ./lambda_archive/
+	rsync -aP ./lambda_src/* ./geff/
 
 	# 4. zip everything up
-	zip -r -D lambda_archive.zip ./lambda_archive/
+	zip -r -D lambda_archive.zip ./geff/
 
 	# 5. Clean up archive dir
-	rm -rf ./lambda_archive
+	rm -rf ./geff
