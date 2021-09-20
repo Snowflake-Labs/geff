@@ -7,10 +7,10 @@ from ..vault import decrypt_if_encrypted
 
 
 def process_row(
-    user,
-    password,
     recipient_email,
     text,
+    user=None,
+    password=None,
     sender_email=None,
     html=None,
     subject=None,
@@ -81,7 +81,6 @@ def process_row(
             'smtp_code': e.smtp_code,
             'smtp_error': e.smtp_error.decode(),
         }
-
     finally:
         smtpserver.close()
 
