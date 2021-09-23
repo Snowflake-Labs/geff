@@ -37,9 +37,22 @@ def process_row(
             auth_dict.get('SMTP_USER_NAME')
             or auth_dict.get('SMTP_USERNAME')
             or auth_dict.get('SMTP_USER')
+            or auth_dict.get('smtp_user_name')
+            or auth_dict.get('smtp_username')
+            or auth_dict.get('smtp_user')
         )
-        password = auth_dict.get('SMTP_PASSWORD') or auth_dict.get('SMTP_PASS')
-        host = auth_dict.get('SMTP_SERVER') or auth_dict.get('SMTP_HOST')
+        password = (
+            auth_dict.get('SMTP_PASSWORD')
+            or auth_dict.get('SMTP_PASS')
+            or auth_dict.get('smtp_password')
+            or auth_dict.get('smtp_pass')
+        )
+        host = (
+            auth_dict.get('SMTP_SERVER')
+            or auth_dict.get('SMTP_HOST')
+            or auth_dict.get('smtp_server')
+            or auth_dict.get('smtp_host')
+        )
 
     # Create the base MIME message.
     if html is None:
