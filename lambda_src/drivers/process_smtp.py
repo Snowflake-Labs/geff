@@ -1,3 +1,4 @@
+import json
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
@@ -11,6 +12,7 @@ def process_row(
     text,
     user=None,
     password=None,
+    auth=None,
     sender_email=None,
     html=None,
     subject=None,
@@ -26,6 +28,18 @@ def process_row(
     user = decrypt_if_encrypted(user)
     password = decrypt_if_encrypted(password)
     sender_email = sender_email or user
+
+    if auth:
+        auth_json = decrypt_if_encrypted(auth)
+        auth_dict = json.loads(auth_json)
+
+        user = (
+            auth_dict.get('SMTP_USER_NAME')
+            or auth_dict.get('SMTP_USERNAME')
+            or auth_dict.get('SMTP_USER')
+        )
+        password = auth_dict.get('SMTP_PASSWORD') or auth_dict.get('SMTP_PASS')
+        host = auth_dict.get('SMTP_SERVER') or auth_dict.get('SMTP_HOST')
 
     # Create the base MIME message.
     if html is None:
@@ -75,6 +89,11 @@ def process_row(
 
     try:
         result = smtpserver.sendmail(sender_email, recipients, message.as_string())
+    except ValueError as e:
+        result = {
+            'error': 'ValueError',
+            'reason': str(e),
+        }
     except smtplib.SMTPDataError as e:
         result = {
             'error': 'SMTPDataError',
