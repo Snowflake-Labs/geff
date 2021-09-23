@@ -3,8 +3,62 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Dict, Tuple, Any
 
 from ..vault import decrypt_if_encrypted
+
+
+def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
+    user = next(
+        value
+        for value in map(
+            auth_dict.get,
+            [
+                'SMTP_USERNAME',
+                'SMTP_USER',
+                'SMTP_USER_NAME',
+                'smtp_user_name',
+                'smtp_username',
+                'smtp_user',
+                'username',
+                'user_name',
+                'user',
+            ],
+        )
+        if value is not None
+    )
+    password = next(
+        value
+        for value in map(
+            auth_dict.get,
+            [
+                'SMTP_PASSWORD',
+                'SMTP_PASS',
+                'smtp_password',
+                'smtp_pass',
+                'password',
+                'pass',
+            ],
+        )
+        if value is not None
+    )
+    host = next(
+        value
+        for value in map(
+            auth_dict.get,
+            [
+                'SMTP_SERVER',
+                'SMTP_HOST',
+                'smtp_server',
+                'smtp_host',
+                'host',
+                'server',
+                'mail_server',
+            ],
+        )
+        if value is not None
+    )
+    return user, password, host
 
 
 def process_row(
@@ -32,27 +86,7 @@ def process_row(
     if auth:
         auth_json = decrypt_if_encrypted(auth)
         auth_dict = json.loads(auth_json)
-
-        user = (
-            auth_dict.get('SMTP_USER_NAME')
-            or auth_dict.get('SMTP_USERNAME')
-            or auth_dict.get('SMTP_USER')
-            or auth_dict.get('smtp_user_name')
-            or auth_dict.get('smtp_username')
-            or auth_dict.get('smtp_user')
-        )
-        password = (
-            auth_dict.get('SMTP_PASSWORD')
-            or auth_dict.get('SMTP_PASS')
-            or auth_dict.get('smtp_password')
-            or auth_dict.get('smtp_pass')
-        )
-        host = (
-            auth_dict.get('SMTP_SERVER')
-            or auth_dict.get('SMTP_HOST')
-            or auth_dict.get('smtp_server')
-            or auth_dict.get('smtp_host')
-        )
+        user, password, host = parse_smtp_creds(auth_dict)
 
     # Create the base MIME message.
     if html is None:
