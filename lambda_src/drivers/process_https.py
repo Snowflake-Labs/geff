@@ -74,9 +74,12 @@ def process_row(
         if 'host' in req_auth and not req_host:
             req_host = req_auth['host']
 
-        # We reject the auth header if not pinned to a host
+        # We reject the request if the 'auth' is not pinned to a host or doesn't match the pinned host
         if req_auth.get('host') != req_host:
-            pass  # if host in ct, only send creds to that host
+            raise ValueError(
+                'Requests can only be made to host provided in secret material.'
+            )
+
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
@@ -102,13 +105,6 @@ def process_row(
 
     if req_params:
         req_url += f'?{req_params}'
-
-    pin_origin: Text = f'https://{req_host}'
-    next_url: Optional[str] = req_url
-    if next_url and not next_url.startswith(pin_origin):
-        return ValueError(
-            'Requests can only be made to host provided in secret material.'
-        )
 
     row_data: List[Any] = []
 
