@@ -16,13 +16,8 @@ def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
             [
                 'SMTP_USERNAME',
                 'SMTP_USER',
-                'SMTP_USER_NAME',
-                'smtp_user_name',
                 'smtp_username',
                 'smtp_user',
-                'username',
-                'user_name',
-                'user',
             ],
         )
         if value is not None
@@ -36,8 +31,6 @@ def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
                 'SMTP_PASS',
                 'smtp_password',
                 'smtp_pass',
-                'password',
-                'pass',
             ],
         )
         if value is not None
@@ -51,9 +44,6 @@ def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
                 'SMTP_HOST',
                 'smtp_server',
                 'smtp_host',
-                'host',
-                'server',
-                'mail_server',
             ],
         )
         if value is not None
@@ -87,6 +77,10 @@ def process_row(
         auth_json = decrypt_if_encrypted(auth)
         auth_dict = json.loads(auth_json)
         user, password, host = parse_smtp_creds(auth_dict)
+        if not host:
+            raise ValueError(
+                'Credentials not pinned to an SMTP host! This can increase the risk of credential compromise.'
+            )
 
     # Create the base MIME message.
     if html is None:

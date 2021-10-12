@@ -59,6 +59,7 @@ def process_row(
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
+    # We look for an auth header and if found we parse it from it's encoded format
     if auth is not None:
         auth = decrypt_if_encrypted(auth)
         assert auth is not None
@@ -73,6 +74,7 @@ def process_row(
         if 'host' in req_auth and not req_host:
             req_host = req_auth['host']
 
+        # We reject the auth header if not pinned to a host
         if req_auth.get('host') != req_host:
             pass  # if host in ct, only send creds to that host
         elif 'basic' in req_auth:
@@ -101,7 +103,13 @@ def process_row(
     if req_params:
         req_url += f'?{req_params}'
 
+    pin_origin: Text = f'https://{req_host}'
     next_url: Optional[str] = req_url
+    if next_url and not next_url.startswith(pin_origin):
+        return ValueError(
+            'Requests can only be made to host provided in secret material.'
+        )
+
     row_data: List[Any] = []
 
     LOG.debug('Starting pagination.')
@@ -177,7 +185,7 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-  
+
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
