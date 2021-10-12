@@ -33,7 +33,6 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
-    destination_uri: Text = '',
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
@@ -77,7 +76,7 @@ def process_row(
         # We reject the request if the 'auth' is not pinned to a host or doesn't match the pinned host
         if req_auth.get('host') != req_host:
             raise ValueError(
-                'Requests can only be made to host provided in secret material.'
+                'Requests can only be made to host provided in the auth header.'
             )
 
         elif 'basic' in req_auth:
@@ -106,6 +105,7 @@ def process_row(
     if req_params:
         req_url += f'?{req_params}'
 
+    next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
     LOG.debug('Starting pagination.')
