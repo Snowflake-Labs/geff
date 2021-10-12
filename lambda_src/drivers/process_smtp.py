@@ -9,45 +9,9 @@ from ..vault import decrypt_if_encrypted
 
 
 def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
-    user = next(
-        value
-        for value in map(
-            auth_dict.get,
-            [
-                'SMTP_USERNAME',
-                'SMTP_USER',
-                'smtp_username',
-                'smtp_user',
-            ],
-        )
-        if value is not None
-    )
-    password = next(
-        value
-        for value in map(
-            auth_dict.get,
-            [
-                'SMTP_PASSWORD',
-                'SMTP_PASS',
-                'smtp_password',
-                'smtp_pass',
-            ],
-        )
-        if value is not None
-    )
-    host = next(
-        value
-        for value in map(
-            auth_dict.get,
-            [
-                'SMTP_SERVER',
-                'SMTP_HOST',
-                'smtp_server',
-                'smtp_host',
-            ],
-        )
-        if value is not None
-    )
+    user = auth_dict.get('SMTP_USERNAME')
+    password = auth_dict.get('SMTP_PASSWORD')
+    host = auth_dict.get('SMTP_HOST')
     return user, password, host
 
 
