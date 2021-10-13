@@ -3,16 +3,18 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, Tuple, Any
+from typing import Dict, Optional, Tuple, Any
 
 from ..vault import decrypt_if_encrypted
 
 
-def parse_smtp_creds(auth_dict: Dict) -> Tuple[Any, Any, Any]:
-    user = auth_dict.get('SMTP_USERNAME')
+def parse_smtp_creds(
+    auth_dict: Dict,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    username = auth_dict.get('SMTP_USERNAME')
     password = auth_dict.get('SMTP_PASSWORD')
     host = auth_dict.get('SMTP_HOST')
-    return user, password, host
+    return username, password, host
 
 
 def process_row(
@@ -39,11 +41,16 @@ def process_row(
 
     if auth:
         auth_json = decrypt_if_encrypted(auth)
+        assert auth is not None
+
         auth_dict = json.loads(auth_json)
-        user, password, host = parse_smtp_creds(auth_dict)
-        if not host:
+        user, password, auth_host = parse_smtp_creds(auth_dict)
+        if not auth_host:
+            raise ValueError('\'auth\' is missing the \'host\' key.')
+
+        if auth_host != host:
             raise ValueError(
-                'Credentials not pinned to an SMTP host! This can increase the risk of credential compromise.'
+                'Requests can only be made to host provided in the auth header.'
             )
 
     # Create the base MIME message.
