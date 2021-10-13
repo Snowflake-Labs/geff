@@ -73,7 +73,7 @@ def process_row(
         auth_host = req_auth.get('host')
 
         if not auth_host:
-            raise ValueError('\'auth\' is missing the \'SMTP_HOST\' key.')
+            raise ValueError("'auth' is missing the 'host' key.")
 
         # We reject the request if the 'auth' is not pinned to a host or doesn't match the pinned host
         if auth_host != req_host:
