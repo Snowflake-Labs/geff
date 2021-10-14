@@ -41,12 +41,10 @@ def process_row(
 
     if auth:
         auth_json = decrypt_if_encrypted(auth)
-        assert auth is not None
-
         auth_dict = json.loads(auth_json)
         user, password, auth_host = parse_smtp_creds(auth_dict)
         if not auth_host:
-            raise ValueError('\'auth\' is missing the \'host\' key.')
+            raise ValueError('\'auth\' is missing the \'SMTP_HOST\' key.')
 
         if auth_host != host:
             raise ValueError(

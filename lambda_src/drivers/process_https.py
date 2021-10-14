@@ -61,11 +61,10 @@ def process_row(
     # We look for an auth header and if found, we parse it from its encoded format
     if auth is not None:
         auth = decrypt_if_encrypted(auth)
-        assert auth is not None
 
         req_auth = (
             loads(auth)
-            if auth.startswith('{')
+            if auth and auth.startswith('{')
             else parse_header_dict(auth)
             if auth
             else {}
