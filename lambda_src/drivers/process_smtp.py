@@ -47,7 +47,7 @@ def process_row(
         if not auth_host:
             raise ValueError("'auth' is missing the 'SMTP_HOST' key.")
 
-        if auth_host and host and auth_host != host:
+        if auth_host and host != 'smtp.gmail.com' and auth_host != host:
             raise ValueError(
                 "Requests can only be made to host provided in the auth header."
             )
