@@ -29,7 +29,7 @@ def process_row(
     reply_to=None,
     cc=None,
     bcc=None,
-    host='smtp.gmail.com',
+    host=None,
     port=587,
     use_ssl=True,
     use_tls=True,
@@ -47,10 +47,14 @@ def process_row(
         if not auth_host:
             raise ValueError("'auth' is missing the 'SMTP_HOST' key.")
 
-        if auth_host and host != 'smtp.gmail.com' and auth_host != host:
+        if auth_host and host and auth_host != host:
             raise ValueError(
                 "Requests can only be made to host provided in the auth header."
             )
+        elif not host and auth_host:
+            host = auth_host
+        elif not host:
+            host = 'smtp.gmail.com'
 
     # Create the base MIME message.
     if html is None:
