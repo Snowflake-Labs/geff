@@ -76,7 +76,7 @@ def process_row(
             LOG.info(f'\'auth\' missing the \'host\' key.')
 
         # We reject the request if the 'auth' doesn't match the pinned host.
-        if auth_host and auth_host != req_host:
+        if auth_host != req_host:
             raise ValueError(
                 'Requests can only be made to host provided in the auth header.'
             )
