@@ -44,11 +44,11 @@ def process_row(
         auth_dict = json.loads(auth_json)
         user, password, auth_host = parse_smtp_creds(auth_dict)
         if not auth_host:
-            raise ValueError('\'auth\' is missing the \'SMTP_HOST\' key.')
+            raise ValueError("'auth' is missing the 'SMTP_HOST' key.")
 
         if auth_host != host:
             raise ValueError(
-                'Requests can only be made to host provided in the auth header.'
+                "Requests can only be made to host provided in the auth header."
             )
 
     # Create the base MIME message.
