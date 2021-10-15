@@ -71,16 +71,15 @@ def process_row(
         )
         auth_host = req_auth.get('host')
 
-        # We make unauthenticated request if the 'host' key is missing.
-        if not auth_host:
-            LOG.info(f"'auth' missing the 'host' key.")
-
         # We reject the request if the 'auth' is present but doesn't match the pinned host.
         if auth_host and auth_host != req_host:
             raise ValueError(
                 "Requests can only be made to host provided in the auth header."
             )
-
+        # We make unauthenticated request if the 'host' key is missing.
+        elif not auth_host:
+            LOG.info(f"'auth' missing the 'host' key.")
+            pass
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
