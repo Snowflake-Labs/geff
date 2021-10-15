@@ -177,7 +177,7 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-  
+
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
