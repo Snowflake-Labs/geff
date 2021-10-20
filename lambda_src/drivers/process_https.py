@@ -78,8 +78,7 @@ def process_row(
             )
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
-            LOG.info(f"'auth' missing the 'host' key.")
-            pass
+            raise ValueError(f"'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
