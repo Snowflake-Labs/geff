@@ -59,7 +59,7 @@ def process_row(
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
     # We look for an auth header and if found, we parse it from its encoded format
-    if auth is not None:
+    if auth:
         auth = decrypt_if_encrypted(auth)
 
         req_auth = (
