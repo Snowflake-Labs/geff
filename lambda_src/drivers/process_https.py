@@ -78,7 +78,7 @@ def process_row(
             )
         # If the URL is missing a hostname, use the host from the auth dictionary
         elif auth_host and not req_host:
-            req_host = req_auth['host']
+            req_host = auth_host
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
             raise ValueError(f"'auth' missing the 'host' key.")
