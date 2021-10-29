@@ -72,10 +72,13 @@ def process_row(
         auth_host = req_auth.get('host')
 
         # We reject the request if the 'auth' is present but doesn't match the pinned host.
-        if auth_host and auth_host != req_host:
+        if auth_host and req_host and auth_host != req_host:
             raise ValueError(
                 "Requests can only be made to host provided in the auth header."
             )
+        # If the URL is missing a hostname, use the host from the auth dictionary
+        elif auth_host and not req_host:
+            req_host = req_auth['host']
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
             raise ValueError(f"'auth' missing the 'host' key.")
