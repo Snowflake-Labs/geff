@@ -33,7 +33,6 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
-    destination_uri: Text = '',
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
@@ -59,22 +58,30 @@ def process_row(
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
-    if auth is not None:
+    # We look for an auth header and if found, we parse it from its encoded format
+    if auth:
         auth = decrypt_if_encrypted(auth)
-        assert auth is not None
+
         req_auth = (
             loads(auth)
-            if auth.startswith('{')
+            if auth and auth.startswith('{')
             else parse_header_dict(auth)
             if auth
             else {}
         )
+        auth_host = req_auth.get('host')
 
-        if 'host' in req_auth and not req_host:
-            req_host = req_auth['host']
-
-        if req_auth.get('host') != req_host:
-            pass  # if host in ct, only send creds to that host
+        # We reject the request if the 'auth' is present but doesn't match the pinned host.
+        if auth_host and req_host and auth_host != req_host:
+            raise ValueError(
+                "Requests can only be made to host provided in the auth header."
+            )
+        # If the URL is missing a hostname, use the host from the auth dictionary
+        elif auth_host and not req_host:
+            req_host = auth_host
+        # We make unauthenticated request if the 'host' key is missing.
+        elif not auth_host:
+            raise ValueError(f"'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
