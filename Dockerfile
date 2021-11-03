@@ -5,14 +5,16 @@ RUN yum update -y && \
     yum install -y git && \
     rm -Rf /var/cache/yum
 
-COPY lambda_src/ "${LAMBDA_TASK_ROOT}"
+RUN mkdir "${LAMBDA_TASK_ROOT}/geff/"
 
-COPY requirements.txt "${LAMBDA_TASK_ROOT}"
+COPY lambda_src/  "${LAMBDA_TASK_ROOT}/geff/"
 
-RUN ls -l "${LAMBDA_TASK_ROOT}"
+COPY requirements.txt  "${LAMBDA_TASK_ROOT}"
+
+RUN ls -l
 
 # Install the function's dependencies using file requirements.txt
 RUN  pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
 
 # Set the CMD to yoaur handler (could also be done as a parameter override outside of the Dockerfile)
-CMD [ "lambda_function.lambda_handler" ]
+CMD [ "geff.lambda_function.lambda_handler" ]
