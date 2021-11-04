@@ -2,7 +2,7 @@
 
 ACCOUNT_ID="<enter account ID>"
 IMAGE_VER=geff:latest
-ECR_HOST="075393536245.dkr.ecr.us-west-2.amazonaws.com"
+ECR_HOST="${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"
 
 # Create repo for GEFF docker image
 aws ecr create-repository --repository-name geff --region us-west-2
