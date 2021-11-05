@@ -6,6 +6,16 @@ The Generic External Function Framework (GEFF) is a generic backend for [Snowfla
 
 ## Instructions
 
+### Building and uploading image to ECR
+
+```bash
+# Clone repo
+git clone git@github.com:Snowflake-Labs/geff.git
+
+# Run ecr.sh
+./ecr.sh 123556660 us-west-2
+```
+
 ### Deploying with Terraform
 
 Below is an example as used in [`terraform-snowflake-aws-geff`](https://github.com/Snowflake-Labs/terraform-snowflake-aws-geff):
@@ -41,7 +51,7 @@ pip3 install -r requirements-dev.txt
 python -m pytest tests/*
 ```
 
-### Creating a zip archive
+### Creating a zip archive of the code
 ```bash
 make pack
 ```
