@@ -2,7 +2,7 @@
 
 # GEFF
 
-The Generic External Function Framework (GEFF) is a generic backend for [Snowflake External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction.html) which allows Snowflake operators to perform generic invocations of Call Drivers (e.g. HTTP, SMTP, XML-RPC) and either return to Snowflake or write call responses using Destination Drivers (e.g. S3). This empowers them to create new pipelines in Snowflake's Data Cloud using a standardized RBAC and interactions with Cloud Infrastructure for management of authentication credentials and other secrets.
+The Generic External Function Framework (GEFF) is a generic backend for [Snowflake External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction.html) which allows Snowflake operators to perform generic invocations of Call Drivers (e.g. HTTP, SMTP, XML-RPC) and either return data to Snowflake or write call responses using Destination Drivers (e.g. S3) thus empowering them to create new pipelines in Snowflake's Data Cloud using a standardized RBAC and interactions with Cloud Infrastructure for management of authentication credentials and other secrets.
 
 ## Instructions
 
