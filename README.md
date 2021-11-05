@@ -14,15 +14,14 @@ NOTE: The handler is `geff.lambda_function.lambda_handler` as opposed to the def
 
 ```hcl
 resource "aws_lambda_function" "geff_lambda" {
-  function_name    = local.lambda_function_name
-  role             = aws_iam_role.geff_lambda_assume_role.arn
-  handler          = "geff.lambda_function.lambda_handler"
-  memory_size      = "4096" # 4 GB
-  runtime          = local.runtime
-  timeout          = "900" # 15 mins
-  publish          = null
-  filename         = data.archive_file.lambda_code.output_path
-  source_code_hash = data.archive_file.lambda_code.output_base64sha256
+  function_name = local.lambda_function_name
+  role          = aws_iam_role.geff_lambda_assume_role.arn
+
+  memory_size = "4096" # 4 GB
+  timeout     = "900"  # 15 mins
+
+  image_uri    = local.lambda_image_repo_version # this is the GEFF docker image uploaded using ecr.sh
+  package_type = "Image"
 }
 ```
 
