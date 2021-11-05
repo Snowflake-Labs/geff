@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.8
+FROM public.ecr.aws/lambda/python:3.9
 
 # Install git and git clone the geff repo
 RUN yum update -y && \
@@ -10,8 +10,6 @@ RUN mkdir "${LAMBDA_TASK_ROOT}/geff/"
 COPY lambda_src/  "${LAMBDA_TASK_ROOT}/geff/"
 
 COPY requirements.txt  "${LAMBDA_TASK_ROOT}"
-
-RUN ls -l
 
 # Install the function's dependencies using file requirements.txt
 RUN  pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
