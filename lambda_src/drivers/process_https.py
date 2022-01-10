@@ -156,7 +156,7 @@ def process_row(
                 if e.headers.get('Content-Encoding') == 'gzip'
                 else e.read()
             ).decode()
-            content_type = e.headers.get('Content-Type')
+            content_type = e.headers.get('Content-Type', '')
             result = {
                 'error': 'HTTPError',
                 'url': next_url,
