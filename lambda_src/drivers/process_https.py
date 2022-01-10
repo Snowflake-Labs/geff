@@ -164,7 +164,7 @@ def process_row(
                 'reason': e.reason,
                 'body': (
                     loads(response_body)
-                    if content_type.startswith('application/json')
+                    if content_type and content_type.startswith('application/json')
                     else response_body
                 ),
             }
