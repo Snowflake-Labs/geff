@@ -2,6 +2,7 @@ from json import loads
 
 import boto3
 from botocore.response import StreamingBody
+from ..utils import pick
 
 
 DISALLOWED_CLIENTS = {'kms', 'secretsmanager'}
