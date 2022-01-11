@@ -1,4 +1,4 @@
-name: deploy-to-dev
+name: deploy-to-prod
 
 on:
   push:
