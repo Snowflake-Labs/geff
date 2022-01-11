@@ -19,7 +19,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: us-west-2
-          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID_DEV }}:role/geff-docker-push
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -28,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.ECR_REGISTRY }}/geff:latest
+          tags: ${{ secrets.ECR_REGISTRY_DEV }}/geff:latest
