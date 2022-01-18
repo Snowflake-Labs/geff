@@ -32,7 +32,8 @@ def process_row(
             aws_secret_access_key=SECRET_KEY,
             aws_session_token=SESSION_TOKEN,
         )
-    client = boto3.client(client_name, region)
+    else:
+        client = boto3.client(client_name, region)
     method = getattr(client, method_name)
     result = method(**kwargs)
     if (
