@@ -1,23 +1,35 @@
+import json
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Dict, Optional, Tuple, Any
 
 from ..vault import decrypt_if_encrypted
 
 
+def parse_smtp_creds(
+    auth_dict: Dict,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    username = auth_dict.get('SMTP_USERNAME')
+    password = auth_dict.get('SMTP_PASSWORD')
+    host = auth_dict.get('SMTP_HOST')
+    return username, password, host
+
+
 def process_row(
-    user,
-    password,
     recipient_email,
     text,
+    user=None,
+    password=None,
+    auth=None,
     sender_email=None,
     html=None,
     subject=None,
     reply_to=None,
     cc=None,
     bcc=None,
-    host='smtp.gmail.com',
+    host=None,
     port=587,
     use_ssl=True,
     use_tls=True,
@@ -26,6 +38,23 @@ def process_row(
     user = decrypt_if_encrypted(user)
     password = decrypt_if_encrypted(password)
     sender_email = sender_email or user
+
+    if auth:
+        auth_json = decrypt_if_encrypted(auth)
+        auth_dict = json.loads(auth_json)
+        user, password, auth_host = parse_smtp_creds(auth_dict)
+
+        if not auth_host:
+            raise ValueError("'auth' is missing the 'SMTP_HOST' key.")
+
+        if auth_host and host and auth_host != host:
+            raise ValueError(
+                "Requests can only be made to host provided in the auth header."
+            )
+        elif not host and auth_host:
+            host = auth_host
+        elif not host:
+            host = 'smtp.gmail.com'
 
     # Create the base MIME message.
     if html is None:
@@ -75,13 +104,17 @@ def process_row(
 
     try:
         result = smtpserver.sendmail(sender_email, recipients, message.as_string())
+    except ValueError as e:
+        result = {
+            'error': 'ValueError',
+            'reason': str(e),
+        }
     except smtplib.SMTPDataError as e:
         result = {
             'error': 'SMTPDataError',
             'smtp_code': e.smtp_code,
             'smtp_error': e.smtp_error.decode(),
         }
-
     finally:
         smtpserver.close()
 

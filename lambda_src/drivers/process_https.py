@@ -1,11 +1,11 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
-from json import JSONDecodeError, dumps, load, loads
+from json import JSONDecodeError, dumps, loads
 from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 from ..utils import LOG, parse_header_links, pick
@@ -33,18 +33,16 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
-    destination_uri: Text = '',
 ):
-    if url:
-        req_url = base_url + url
-        m = match(r'^https://([^/]+)(.*)$', req_url)
-        if m:
-            req_host, req_path = m.groups()
-        else:
-            raise RuntimeError('url must start with https://')
-    else:
-        req_host = base_url
+    if not base_url and not url:
+        raise ValueError('Missing required parameter. Need one of url or base-url.')
 
+    req_url = url if url.startswith(base_url) else base_url + url
+    u = urlparse(req_url)
+    if u.scheme != 'https':
+        raise ValueError('URL scheme must be HTTPS.')
+
+    req_host = u.hostname
     req_kwargs = parse_header_dict(kwargs)
     req_headers = {
         k: v.format(**req_kwargs)
@@ -60,22 +58,30 @@ def process_row(
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
-    if auth is not None:
+    # We look for an auth header and if found, we parse it from its encoded format
+    if auth:
         auth = decrypt_if_encrypted(auth)
-        assert auth is not None
+
         req_auth = (
             loads(auth)
-            if auth.startswith('{')
+            if auth and auth.startswith('{')
             else parse_header_dict(auth)
             if auth
             else {}
         )
+        auth_host = req_auth.get('host')
 
-        if 'host' in req_auth and not req_host:
-            req_host = req_auth['host']
-
-        if req_auth.get('host') != req_host:
-            pass  # if host in ct, only send creds to that host
+        # We reject the request if the 'auth' is present but doesn't match the pinned host.
+        if auth_host and req_host and auth_host != req_host:
+            raise ValueError(
+                "Requests can only be made to host provided in the auth header."
+            )
+        # If the URL is missing a hostname, use the host from the auth dictionary
+        elif auth_host and not req_host:
+            req_host = auth_host
+        # We make unauthenticated request if the 'host' key is missing.
+        elif not auth_host:
+            raise ValueError(f"'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
@@ -99,12 +105,13 @@ def process_row(
     else:
         req_data = None if data is None else data.encode()
 
-    req_url += f'?{req_params}'
+    if req_params:
+        req_url += f'?{req_params}'
+
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
     LOG.debug('Starting pagination.')
-
     while next_url:
         LOG.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
@@ -144,8 +151,12 @@ def process_row(
             )
             result = pick(req_results_path, response)
         except HTTPError as e:
-            response_body = e.read().decode()
-            content_type = e.headers.get('Content-Type')
+            response_body = (
+                decompress(e.read())
+                if e.headers.get('Content-Encoding') == 'gzip'
+                else e.read()
+            ).decode()
+            content_type = e.headers.get('Content-Type', '')
             result = {
                 'error': 'HTTPError',
                 'url': next_url,
@@ -153,7 +164,7 @@ def process_row(
                 'reason': e.reason,
                 'body': (
                     loads(response_body)
-                    if content_type.startswith('application/json')
+                    if content_type and content_type.startswith('application/json')
                     else response_body
                 ),
             }
@@ -173,14 +184,21 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
+
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
                 cursor_path = req_cursor
                 cursor_param = cursor_path.split('.')[-1]
+
             cursor_value = pick(cursor_path, response)
+
             next_url = (
-                f'{req_url}&{cursor_param}={cursor_value}' if cursor_value else None
+                cursor_value
+                if cursor_value and cursor_value.startswith('https://')
+                else f'{req_url}&{cursor_param}={cursor_value}'
+                if cursor_value
+                else None
             )
         elif links_headers and isinstance(result, list):
             row_data += result
