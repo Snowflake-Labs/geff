@@ -2,7 +2,8 @@ from json import loads
 
 import boto3
 from botocore.response import StreamingBody
-from ..utils import pick
+
+from utils import pick
 
 DISALLOWED_CLIENTS = {'kms', 'secretsmanager'}
 
@@ -47,10 +48,8 @@ def process_row(
         client = boto3.client(client_name, region)
     method = getattr(client, method_name)
     result = method(**kwargs)
-    if (
-        results_path
-        and result.get('ContentType') == 'application/json'
-        and isinstance(result.get('Body'), StreamingBody)
-    ):
-        result = pick(results_path, loads(result.get('Body')).read())
+    if results_path:
+        if isinstance(result.get('Body'), StreamingBody):
+            result = loads(result['Body'].read())
+        result = pick(results_path, result)
     return result
