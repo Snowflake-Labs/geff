@@ -11,7 +11,7 @@ DISALLOWED_CLIENTS = {'kms', 'secretsmanager'}
 def process_row(
     client_name,
     method_name,
-    assume_role_arns=None,
+    assume_role_chain_params=None,
     role_session_name=None,
     results_path=None,
     region='us-west-2',
@@ -19,13 +19,13 @@ def process_row(
 ):
     if client_name in DISALLOWED_CLIENTS:
         return
-    if assume_role_arns:
+    if assume_role_chain_params:
         creds = None
-        for arn in loads(assume_role_arns):
+        for p in loads(assume_role_chain_params):
             access_key = creds['Credentials']['AccessKeyId'] if creds else None
             secret_key = creds['Credentials']['SecretAccessKey'] if creds else None
             aws_session_token = creds['Credentials']['SessionToken'] if creds else None
-            assume_role_params = arn if type(arn) is dict else {"RoleArn": arn}
+            assume_role_params = p if type(p) is dict else {"RoleArn": p}
             creds = boto3.client(
                 'sts',
                 aws_access_key_id=access_key,
