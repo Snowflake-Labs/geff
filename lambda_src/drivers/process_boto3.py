@@ -3,7 +3,7 @@ from json import loads
 import boto3
 from botocore.response import StreamingBody
 
-from utils import pick
+from ..utils import pick
 
 DISALLOWED_CLIENTS = {'kms', 'secretsmanager'}
 
@@ -35,7 +35,7 @@ def process_row(
                 RoleSessionName='geff'
                 if role_session_name is None
                 else f'geff_{role_session_name}',
-                **assume_role_params
+                **assume_role_params,
             )
         client = boto3.client(
             client_name,
