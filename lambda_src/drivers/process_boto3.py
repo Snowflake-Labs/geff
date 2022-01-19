@@ -24,18 +24,20 @@ def process_row(
             access_key = creds['Credentials']['AccessKeyId'] if creds else None
             secret_key = creds['Credentials']['SecretAccessKey'] if creds else None
             aws_session_token = creds['Credentials']['SessionToken'] if creds else None
-            creds = boto3.client('sts').assume_role(
+            creds = boto3.client(
+                'sts',
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
+                aws_session_token=aws_session_token,
+            ).assume_role(
                 RoleArn=assume_role_arn,
                 RoleSessionName=f'geff_{role_session_name}'
                 if role_session_name is None
                 else 'geff',
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key,
-                aws_session_token=aws_session_token,
             )
         client = boto3.client(
             client_name,
-            region=region,
+            region_name=region,
             aws_access_key_id=creds['Credentials']['AccessKeyId'],
             aws_secret_access_key=creds['Credentials']['SecretAccessKey'],
             aws_session_token=creds['Credentials']['SessionToken'],
