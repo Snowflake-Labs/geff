@@ -16,10 +16,16 @@ LOG.setLevel(logging.DEBUG)
 
 def pick(path: str, d: dict):
     # path e.g. "a.b.c"
+    # {a: {b: {c: []}}}
     retval: Optional[Any] = d
     for p in path.split('.'):
-        if p and retval:
+        if p and isinstance(retval, dict):
             retval = retval.get(p)
+        elif not isinstance(retval, dict):
+            retval = None
+            break
+        else:
+            break
     return retval
 
 
@@ -92,7 +98,7 @@ def format(s, ps):
             s = s.replace(old, new)
         return s
 
-    m = re.match('{(\d+)}', s)
+    m = re.match(r'{(\d+)}', s)
     return ps[int(m.group(1))] if m else replace_refs(s, ps)
 
 

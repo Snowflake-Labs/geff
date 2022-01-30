@@ -46,12 +46,20 @@ pip3 install -r requirements-dev.txt
 ```
 
 ### Test
+
 ```bash
 # While in the venv
 python -m pytest tests/*
 ```
 
+#### Check coverage
+
+```
+python -m pytest --cov=lambda_src tests/ --cov-report html
+```
+
 ### Creating a zip archive of the code
+
 ```bash
 make pack
 ```
