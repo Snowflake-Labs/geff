@@ -217,4 +217,4 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
         return create_response(400, 'Unexpected Request.')
     except Exception as e:
         GEFF_SENTRY_LOGGER.exception(e)
-        return create_response(500, 'Error check GEFF lambda logs for details.')
+        return create_response(500, 'Internal Server Error. Check GEFF logs for details.')
