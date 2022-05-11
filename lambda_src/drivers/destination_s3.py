@@ -11,7 +11,6 @@ from lambda_src.log import get_loggers
 
 
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
-CONSOLE_LOGGER = logging.getLogger('console')
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
 AWS_REGION = os.environ[
