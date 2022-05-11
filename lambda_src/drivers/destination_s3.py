@@ -3,11 +3,15 @@ import os
 from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
+import logging
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG
+from lambda_src.log import get_loggers
 
+
+CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
+CONSOLE_LOGGER = logging.getLogger('console')
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
 AWS_REGION = os.environ[
@@ -28,11 +32,11 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     Returns:
         Tuple[Text, Text]: [description]
     """
-    LOG.debug(f'destination from header is {destination}')
+    CONSOLE_LOGGER.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
     prefix = parsed_url.path.split('/', 2)[1] if parsed_url.path.count('/') >= 2 else ''
-    LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
+    CONSOLE_LOGGER.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
 
@@ -57,7 +61,7 @@ def chunker(records: List[Any], chunk_size: int) -> Generator[List[Any], None, N
     Use to paginate a list of objects.
     >>> a = [1,2,3,4,5]
     >>> for chunk in chunker(a, 2):
-    ...     LOG.debug(chunk)
+    ...     CONSOLE_LOGGER.debug(chunk)
     ...
     [1, 2]
     [3, 4]
@@ -151,10 +155,10 @@ def check_status(destination: Text, batch_id: Text) -> Optional[Text]:
         json_object = json.loads(content.read().decode('utf-8'))
     except ClientError as ce:
         if ce.response['Error']['Code'] == 'NoSuchKey':
-            LOG.debug('No manifest file found returning None.')
+            CONSOLE_LOGGER.debug('No manifest file found returning None.')
             return None
     else:
-        LOG.debug(f'Manifest file found returning contents. {json_object}')
+        CONSOLE_LOGGER.debug(f'Manifest file found returning contents. {json_object}')
         return json.dumps({'data': json_object})
 
     return None

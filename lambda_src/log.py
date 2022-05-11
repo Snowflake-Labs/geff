@@ -1,5 +1,7 @@
+import logging
 import sys
 import traceback
+from logging import StreamHandler
 from os import getpid
 from os.path import relpath
 from typing import Any
@@ -47,3 +49,17 @@ def format_trace(e: Exception) -> str:
 
     pid = getpid()
     return f'[{pid}] {a}'
+
+
+def setup_logger(logger_name, level=logging.INFO, stdout=False):
+    l = logging.getLogger(logger_name)
+    l.setLevel(level)
+    l.addHandler(StreamHandler(sys.stdout)) if stdout else None
+
+
+def get_loggers():
+    return (
+        logging.getLogger(logger_name='console', level=logging.DEBUG, stdout=True),
+        logging.getLogger(logger_name='geff', level=logging.WARNING),
+        logging.getLogger(logger_name='sentry_driver', level=logging.WARNING),
+    )

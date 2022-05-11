@@ -8,8 +8,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
-from ..utils import LOG, parse_header_links, pick
+import sentry_sdk
+
+from ..log import get_loggers
+from ..utils import parse_header_links, pick
 from ..vault import decrypt_if_encrypted
+
+CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
 
 def make_basic_header(auth):
@@ -111,21 +116,21 @@ def process_row(
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
-    LOG.debug('Starting pagination.')
+    CONSOLE_LOGGER.debug('Starting pagination.')
     while next_url:
-        LOG.debug(f'next_url is {next_url}.')
+        CONSOLE_LOGGER.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 
         try:
-            LOG.debug(f'Making request with {req}')
+            CONSOLE_LOGGER.debug(f'Making request with {req}')
             res = urlopen(req)
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
             res_body = res.read()
-            LOG.debug(f'Got the response body with length: {len(res_body)}')
+            CONSOLE_LOGGER.debug(f'Got the response body with length: {len(res_body)}')
 
             raw_response = (
                 decompress(res_body)
@@ -138,7 +143,7 @@ def process_row(
                 else None
             )
             response_body = loads(raw_response)
-            LOG.debug('Extracted data from response.')
+            CONSOLE_LOGGER.debug('Extracted data from response.')
 
             response = (
                 {
@@ -168,12 +173,14 @@ def process_row(
                     else response_body
                 ),
             }
+            GEFF_SENTRY_LOGGER.exception(e)
         except URLError as e:
             result = {
                 'error': f'URLError',
                 'reason': str(e.reason),
                 'host': req_host,
             }
+            GEFF_SENTRY_LOGGER.exception(e)
         except JSONDecodeError as e:
             result = {
                 'error': 'JSONDecodeError' if raw_response else 'No Content',
@@ -181,6 +188,7 @@ def process_row(
                 'status': res.status,
                 'responded_at': response_date,
             }
+            GEFF_SENTRY_LOGGER.exception(e)
 
         if req_cursor and isinstance(result, list):
             row_data += result
@@ -211,5 +219,5 @@ def process_row(
             row_data = result
             next_url = None
 
-    LOG.debug(f'Returning row_data with count: {len(row_data)}')
+    CONSOLE_LOGGER.debug(f'Returning row_data with count: {len(row_data)}')
     return row_data

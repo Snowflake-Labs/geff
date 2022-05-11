@@ -2,16 +2,15 @@ import json
 import logging
 import os
 import re
-import sys
 from codecs import encode
 from json import dumps
 from typing import Any, Dict, Optional, Text
 
 import boto3
+import sentry_sdk
+from sentry_sdk.client import Client
 
-logging.basicConfig(stream=sys.stdout)
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
+from lambda_src.log import setup_logger
 
 
 def pick(path: str, d: dict):
@@ -124,3 +123,25 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
+
+
+def setup_sentry(geff_dsn, sentry_driver_dsn):
+
+    geff_client = Client(dsn=geff_dsn)
+    sentry_client = Client(dsn=sentry_driver_dsn)
+
+    def send_event(event):
+        if  event.get("logger") == "sentry_driver":
+            sentry_client.capture_event(event)
+        else:
+            geff_client.capture_event(event)
+
+    sentry_sdk.init(
+        transport=send_event,
+        max_breadcrumbs=10,
+    )
+
+    setup_logger(logger_name='console', level=logging.DEBUG, stdout=True),
+    setup_logger(logger_name='geff', level=logging.WARNING),
+    setup_logger(logger_name='sentry_driver', level=logging.ERROR)
+

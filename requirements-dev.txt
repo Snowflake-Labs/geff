@@ -1,8 +1,9 @@
 -r requirements.txt
 black
+boto3
+boto3-stubs
+botocore
 google-api-python-client-stubs
 mypy
 pytest
-botocore
-boto3
-boto3-stubs
+sentry-sdk
