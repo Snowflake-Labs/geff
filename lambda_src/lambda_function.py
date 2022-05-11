@@ -215,6 +215,4 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
 
         return create_response(400, 'Unexpected Request.')
     except Exception as e:
-        if SENTRY_DSN:
-            sentry_sdk.capture_exception(e)
         CONSOLE_LOGGER.exception(e)
