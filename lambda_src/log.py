@@ -59,7 +59,7 @@ def setup_logger(logger_name, level=logging.INFO, stdout=False):
 
 def get_loggers():
     return (
-        setup_logger(name='console', level=logging.DEBUG, stdout=True),
-        setup_logger(name='geff', level=logging.WARNING),
-        setup_logger(name='sentry_driver', level=logging.WARNING),
+        setup_logger(logger_name='console', level=logging.DEBUG, stdout=True),
+        setup_logger(logger_name='geff', level=logging.WARNING),
+        setup_logger(logger_name='sentry_driver', level=logging.WARNING),
     )
