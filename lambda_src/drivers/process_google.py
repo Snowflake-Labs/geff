@@ -1,6 +1,6 @@
 from json import loads
 
-from google.oauth2 import credentials, service_account
+from google.oauth2 import credentials, service_account # type: ignore
 from googleapiclient.discovery import build
 
 from ..vault import decrypt_if_encrypted

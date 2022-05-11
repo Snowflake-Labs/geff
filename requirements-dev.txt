@@ -7,3 +7,5 @@ google-api-python-client-stubs
 mypy
 pytest
 sentry-sdk
+types-certifi
+types-requests
