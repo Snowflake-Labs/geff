@@ -9,28 +9,19 @@ from ..log import get_loggers
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
 
-def process_row(
-    error: str,
-    query_id: str,
+def get_snowsight_url(
     database: str,
     schema: str,
-    name: str,
-    ts: str,
-    history_type: str,
     region: str,
     account: str,
+    name: str,
+    history_type: str,
+    query_id: str,
 ):
-    """Each row is sent to Sentry via the SENTRY_DRIVER_LOGGER
-
-    Args:
-        error (str): The actual error message.
-        service (str): Service or Snowflake object that resulted in this error.
-        ts (str): 
-    """
     type_filter = 'type=relative&relative={"tense":"past","value":28,"unit":"day","excludePartial":false,"exclusionSize":"day","exclusionSizeParam":""}'
     db_schema_filter = f"database={database}&schema={schema}"
 
-    history_url: str = (
+    history_url = (
         (
             f"https://app.snowflake.com/{region}/{account}/compute/history/tasks?" +
             type_filter + 
@@ -49,11 +40,46 @@ def process_row(
             f"/detail?autoRefreshInSeconds=0"
         )
     )
-    history_url_encoded = urlencode(history_url)
+    return urlencode(history_url)
+
+
+def process_row(
+    error: str,
+    query_id: str,
+    database: str,
+    schema: str,
+    name: str,
+    ts: str,
+    history_type: str,
+    region: str,
+    account: str,
+):
+    """Each row is sent to Sentry via the SENTRY_DRIVER_LOGGER
+
+    Args:
+        error (str): The actual error message.
+        query_id (str): The query ID of the failed query.
+        database (str): The DB.
+        schema (str): The schema.
+        name (str): The object name.
+        ts (str): The timestamp of the error.
+        history_type (str): pipe or task or query.
+        region (str): Region of the Snowflake account.
+        account (str): The Snowflake account name.
+    """
+    history_url = get_snowsight_url(
+        database,
+        schema,
+        region,
+        account,
+        name,
+        history_type,
+        query_id,
+    )
 
     try:
         with push_scope() as scope:
-            scope.set_extra('history_url', history_url_encoded)
+            scope.set_extra('history_url', history_url)
             sentry_sdk.set_tag(
                 (
                     'PIPE'
