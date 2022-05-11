@@ -1,4 +1,3 @@
-from typing import Dict
 from urllib.parse import urlencode
 
 import sentry_sdk

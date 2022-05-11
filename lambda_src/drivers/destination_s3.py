@@ -3,7 +3,6 @@ import os
 from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
-import logging
 
 import boto3
 from botocore.exceptions import ClientError

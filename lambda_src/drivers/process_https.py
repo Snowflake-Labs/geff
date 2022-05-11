@@ -8,8 +8,6 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
-import sentry_sdk
-
 from ..log import get_loggers
 from ..utils import parse_header_links, pick
 from ..vault import decrypt_if_encrypted

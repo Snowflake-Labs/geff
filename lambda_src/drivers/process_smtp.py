@@ -3,7 +3,7 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple
 
 from ..vault import decrypt_if_encrypted
 
