@@ -31,4 +31,5 @@ jobs:
       - name: Mypy Check
         uses: jpetrucciani/mypy-check@0.910
         with:
-          path: './lambda_src/'
+          path: "./lambda_src/"
+          mypy_flags: "--config-file .mypy.ini"
