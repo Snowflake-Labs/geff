@@ -125,23 +125,29 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
     return lambda_response
 
 
-def setup_sentry(geff_dsn, sentry_driver_dsn):
+def setup_sentry(geff_dsn: Optional[str], sentry_driver_dsn: Optional[str]) -> None:
+    """Sets up the sentry SDK clients for GEFF exceptions to be sent
+    along with any external errors to be sent to Sentry from the Sentry driver.
 
-    geff_client = Client(dsn=geff_dsn)
-    sentry_client = Client(dsn=sentry_driver_dsn)
+    Args:
+        geff_dsn (Optional[str]): The DSN URL for the geff Sentry project.
+        sentry_driver_dsn (Optional[str]): The DSN URL for the snowflake-errors Sentry project.
+    """
+    if geff_dsn and sentry_driver_dsn:
+        geff_client = Client(dsn=geff_dsn)
+        sentry_client = Client(dsn=sentry_driver_dsn)
 
-    def send_event(event):
-        if  event.get("logger") == "sentry_driver":
-            sentry_client.capture_event(event)
-        else:
-            geff_client.capture_event(event)
+        def send_event(event):
+            if  event.get("logger") == "sentry_driver":
+                sentry_client.capture_event(event)
+            else:
+                geff_client.capture_event(event)
 
-    sentry_sdk.init(
-        transport=send_event,
-        max_breadcrumbs=10,
-    )
+        sentry_sdk.init(
+            transport=send_event,
+            max_breadcrumbs=10,
+        )
 
-    setup_logger(logger_name='console', level=logging.DEBUG, stdout=True),
-    setup_logger(logger_name='geff', level=logging.WARNING),
-    setup_logger(logger_name='sentry_driver', level=logging.ERROR)
-
+    console_logger = setup_logger(logger_name='console', level=logging.DEBUG, stdout=True)
+    geff_logger = setup_logger(logger_name='geff', level=logging.WARNING, stdout=True)
+    sentry_driver_logger = setup_logger(logger_name='sentry_driver', level=logging.ERROR)

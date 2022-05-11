@@ -18,6 +18,7 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 GEFF_DSN = os.environ.get("GEFF_DSN")
 SENTRY_DRIVER_DSN = os.environ.get("SENTRY_DRIVER_DSN")
+
 setup_sentry(GEFF_DSN, SENTRY_DRIVER_DSN)
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
@@ -215,4 +216,5 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
 
         return create_response(400, 'Unexpected Request.')
     except Exception as e:
-        CONSOLE_LOGGER.exception(e)
+        GEFF_SENTRY_LOGGER.exception(e)
+        return create_response(500, 'Error check GEFF lambda logs for details.')

@@ -10,15 +10,38 @@ CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
 
 def get_snowsight_url(
+    account: str,
+    region: str,
     database: str,
     schema: str,
-    region: str,
-    account: str,
     name: str,
     history_type: str,
     query_id: str,
-):
-    type_filter = 'type=relative&relative={"tense":"past","value":28,"unit":"day","excludePartial":false,"exclusionSize":"day","exclusionSizeParam":""}'
+) -> str:
+    """Generate a URL for the erroring object on Snowsight.
+
+    Args:
+        account (str): Snowflake account name.
+        region (str): Snowflake account region.
+        database (str): Snowflake database.
+        schema (str): Snowflake Schema.
+        name (str): Erroring object name. Task, Pipe, Table, View, Function or Procedure.
+        history_type (str): copy, pipe or query.
+        query_id (str): Query ID from the respective ACCOUNT_USAGE.*_HISTORY view.
+
+    Returns:
+        str: Returns the generated URL of the erroring object.
+    """
+
+    relative_filter = {
+        "tense": "past",
+        "value": 1,
+        "unit": "day",
+        "excludePartial": False,
+        "exclusionSize": "day",
+        "exclusionSizeParam": "",
+    }
+    type_filter = f'type=relative&relative={urlencode(relative_filter)}'
     db_schema_filter = f"database={database}&schema={schema}"
 
     history_url = (
@@ -40,19 +63,19 @@ def get_snowsight_url(
             f"/detail?autoRefreshInSeconds=0"
         )
     )
-    return urlencode(history_url)
+    return history_url
 
 
 def process_row(
-    error: str,
-    query_id: str,
+    account: str,
+    region: str,
     database: str,
     schema: str,
     name: str,
-    ts: str,
     history_type: str,
-    region: str,
-    account: str,
+    query_id: str,
+    error: str,
+    ts: str,
 ):
     """Each row is sent to Sentry via the SENTRY_DRIVER_LOGGER
 
@@ -68,10 +91,10 @@ def process_row(
         account (str): The Snowflake account name.
     """
     history_url = get_snowsight_url(
+        account,
+        region,
         database,
         schema,
-        region,
-        account,
         name,
         history_type,
         query_id,

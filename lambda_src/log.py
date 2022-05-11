@@ -1,13 +1,14 @@
 import logging
 import sys
+from tokenize import Number
 import traceback
-from logging import StreamHandler
+from logging import Logger, StreamHandler
 from os import getpid
 from os.path import relpath
-from typing import Any
+from typing import Any, Tuple 
 
 
-def fmt(fs):
+def fmt(fs) -> str:
     return (
         './'
         + relpath(fs.filename)
@@ -17,11 +18,11 @@ def fmt(fs):
     )
 
 
-def format_exception(e):
+def format_exception(e) -> str:
     return ''.join(traceback.format_exception(type(e), e, e.__traceback__))
 
 
-def format_exception_only(e):
+def format_exception_only(e) -> str:
     return ''.join(traceback.format_exception_only(type(e), e)).strip()
 
 
@@ -51,13 +52,32 @@ def format_trace(e: Exception) -> str:
     return f'[{pid}] {a}'
 
 
-def setup_logger(logger_name, level=logging.INFO, stdout=False):
+def setup_logger(logger_name: str, level: int = logging.INFO, stdout: bool = False) -> Logger:
+    """Sets up the logger object.
+
+    Args:
+        logger_name (str): Name to use to retreive the logger instance.
+        level (int, optional): Level of logging. Defaults to logging.INFO.
+        stdout (bool, optional): Bool whether to print to stdout or not. Defaults to False.
+
+    Returns:
+        Logger: Returns the logger object.
+    """
     l = logging.getLogger(logger_name)
     l.setLevel(level)
     l.addHandler(StreamHandler(sys.stdout)) if stdout else None
+    return l
 
 
-def get_loggers():
+def get_loggers() -> Tuple[Logger, Logger, Logger]:
+    """Returns 3 loggers:
+    1. Console only logger
+    2. Sentry + Console logger
+    3. Sentry driver logger
+
+    Returns:
+        Tuple[Any]: Returns the 3 Logger objects.
+    """
     return (
         setup_logger(logger_name='console', level=logging.DEBUG, stdout=True),
         setup_logger(logger_name='geff', level=logging.WARNING),
