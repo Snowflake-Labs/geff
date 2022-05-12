@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
-from lambda_src.log import get_loggers
+from ..log import get_loggers
 
 
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()

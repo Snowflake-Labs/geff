@@ -14,7 +14,7 @@ aws ecr create-repository --repository-name geff --region $AWS_REGION
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_HOST
 
 # Docker Build (Needs docker desktop running)
-docker build -t geff/$IMAGE_VER .
+docker build --platform=linux/amd64 -t geff/$IMAGE_VER . 
 
 docker tag geff/$IMAGE_VER $ECR_HOST/$IMAGE_VER
 

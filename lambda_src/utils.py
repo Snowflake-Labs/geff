@@ -10,7 +10,7 @@ import boto3
 import sentry_sdk
 from sentry_sdk.client import Client
 
-from lambda_src.log import setup_logger
+from .log import setup_logger
 
 
 def pick(path: str, d: dict):

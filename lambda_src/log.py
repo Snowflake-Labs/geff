@@ -1,6 +1,5 @@
 import logging
 import sys
-from tokenize import Number
 import traceback
 from logging import Logger, StreamHandler
 from os import getpid
