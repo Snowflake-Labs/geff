@@ -1,10 +1,11 @@
 import json
 import logging
+from logging import Logger
 import os
 import re
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text
+from typing import Any, Dict, Optional, Text, Tuple
 
 import boto3
 import sentry_sdk
@@ -125,7 +126,10 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
     return lambda_response
 
 
-def setup_sentry(geff_dsn: Optional[str], sentry_driver_dsn: Optional[str]) -> None:
+def setup_sentry(
+    geff_dsn: Optional[str],
+    sentry_driver_dsn: Optional[str],
+) -> Tuple[Logger, Logger, Logger]:
     """Sets up the sentry SDK clients for GEFF exceptions to be sent
     along with any external errors to be sent to Sentry from the Sentry driver.
 
@@ -138,7 +142,7 @@ def setup_sentry(geff_dsn: Optional[str], sentry_driver_dsn: Optional[str]) -> N
         sentry_client = Client(dsn=sentry_driver_dsn)
 
         def send_event(event):
-            if  event.get("logger") == "sentry_driver":
+            if  event.get('logger') == 'sentry_driver':
                 sentry_client.capture_event(event)
             else:
                 geff_client.capture_event(event)
@@ -148,6 +152,8 @@ def setup_sentry(geff_dsn: Optional[str], sentry_driver_dsn: Optional[str]) -> N
             max_breadcrumbs=10,
         )
 
-    console_logger = setup_logger(logger_name='console', level=logging.DEBUG, stdout=True)
-    geff_logger = setup_logger(logger_name='geff', level=logging.WARNING, stdout=True)
-    sentry_driver_logger = setup_logger(logger_name='sentry_driver', level=logging.ERROR)
+    return (
+        setup_logger(logger_name='console', level=logging.DEBUG),
+        setup_logger(logger_name='geff', level=logging.WARNING),
+        setup_logger(logger_name='sentry_driver', level=logging.ERROR),
+    )

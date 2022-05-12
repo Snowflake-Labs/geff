@@ -1,10 +1,9 @@
 import logging
-import sys
 import traceback
 from logging import Logger, StreamHandler
 from os import getpid
 from os.path import relpath
-from typing import Any, Tuple 
+from typing import Any, Tuple
 
 
 def fmt(fs) -> str:
@@ -51,7 +50,7 @@ def format_trace(e: Exception) -> str:
     return f'[{pid}] {a}'
 
 
-def setup_logger(logger_name: str, level: int = logging.INFO, stdout: bool = False) -> Logger:
+def setup_logger(logger_name: str, level: int = logging.INFO) -> Logger:
     """Sets up the logger object.
 
     Args:
@@ -64,7 +63,6 @@ def setup_logger(logger_name: str, level: int = logging.INFO, stdout: bool = Fal
     """
     l = logging.getLogger(logger_name)
     l.setLevel(level)
-    l.addHandler(StreamHandler(sys.stdout)) if stdout else None
     return l
 
 
@@ -78,7 +76,7 @@ def get_loggers() -> Tuple[Logger, Logger, Logger]:
         Tuple[Any]: Returns the 3 Logger objects.
     """
     return (
-        setup_logger(logger_name='console', level=logging.DEBUG, stdout=True),
-        setup_logger(logger_name='geff', level=logging.WARNING),
-        setup_logger(logger_name='sentry_driver', level=logging.WARNING),
+        logging.getLogger(name='console'),
+        logging.getLogger(name='geff'),
+        logging.getLogger(name='sentry_driver'),
     )

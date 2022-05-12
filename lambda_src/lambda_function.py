@@ -18,9 +18,7 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 GEFF_DSN = os.environ.get("GEFF_DSN")
 SENTRY_DRIVER_DSN = os.environ.get("SENTRY_DRIVER_DSN")
-
-setup_sentry(GEFF_DSN, SENTRY_DRIVER_DSN)
-CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
+CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = setup_sentry(GEFF_DSN, SENTRY_DRIVER_DSN)
 
 BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
