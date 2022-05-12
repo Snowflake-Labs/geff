@@ -15,7 +15,6 @@ def get_snowsight_url(
     schema: str,
     name: str,
     history_type: str,
-    query_id: str,
 ) -> str:
     """Generate a URL for the erroring object on Snowsight.
 
@@ -58,7 +57,7 @@ def get_snowsight_url(
         if history_type == "copy"
         else (
             f"https://app.snowflake.com/{region}/{account}/compute/history/queries/" +
-            query_id +
+            name +
             f"/detail?autoRefreshInSeconds=0"
         )
     )
@@ -72,7 +71,6 @@ def process_row(
     schema: str,
     name: str,
     history_type: str,
-    query_id: str,
     error: str,
     ts: str,
 ):
@@ -95,8 +93,7 @@ def process_row(
         database,
         schema,
         name,
-        history_type,
-        query_id,
+        history_type
     )
 
     try:
@@ -104,16 +101,15 @@ def process_row(
             scope.set_extra('history_url', history_url)
             sentry_sdk.set_tag(
                 (
-                    'PIPE'
-                    if history_type in ('pipe', 'PIPE')
-                    else 'TASK'
+                    'PIPE_NAME'
+                    if history_type in ('copy', 'COPY')
+                    else 'TASK_NAME'
                     if history_type in ('task', 'TASK')
-                    else 'QUERY'
+                    else 'QUERY_ID'
                 ),
                 name
             )
             sentry_sdk.set_tag('error', error)
-            sentry_sdk.set_tag('query_id', query_id)
             sentry_sdk.set_tag('error_time', ts)
             sentry_sdk.set_tag('history_type', history_type)
             SENTRY_DRIVER_LOGGER.exception(error)
