@@ -24,7 +24,7 @@ def get_snowsight_url(
         region (str): Snowflake account region.
         database (str): Snowflake database.
         schema (str): Snowflake Schema.
-        name (str): Erroring object name. Task, Pipe, Table, View, Function or Procedure.
+        name (str): Task name or Pipe name (or query ID for query history).
         history_type (str): copy, pipe or query.
         query_id (str): Query ID from the respective ACCOUNT_USAGE.*_HISTORY view.
 
@@ -55,7 +55,7 @@ def get_snowsight_url(
             type_filter +
             f"&pipe={name}&{db_schema_filter}&status=LOAD_FAILED"
         )
-        if history_type == "pipe"
+        if history_type == "copy"
         else (
             f"https://app.snowflake.com/{region}/{account}/compute/history/queries/" +
             query_id +

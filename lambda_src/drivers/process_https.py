@@ -171,7 +171,7 @@ def process_row(
                     else response_body
                 ),
             }
-            GEFF_SENTRY_LOGGER.exception(e)
+            CONSOLE_LOGGER.exception(e)
         except URLError as e:
             result = {
                 'error': f'URLError',
