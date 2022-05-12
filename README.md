@@ -13,7 +13,7 @@ The Generic External Function Framework (GEFF) is a generic backend for [Snowfla
 git clone git@github.com:Snowflake-Labs/geff.git
 
 # Run ecr.sh
-./ecr.sh 123556660 us-west-2
+./ecr.sh 123556660 us-west-2 0.0.x-dev
 ```
 
 ### Deploying with Terraform
@@ -46,12 +46,14 @@ pip3 install -r requirements-dev.txt
 ```
 
 ### Test
+
 ```bash
 # While in the venv
 python -m pytest tests/*
 ```
 
 ### Creating a zip archive of the code
+
 ```bash
 make pack
 ```
