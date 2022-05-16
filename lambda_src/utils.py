@@ -1,10 +1,10 @@
 import json
 import logging
-from logging import Logger
 import os
 import re
 from codecs import encode
 from json import dumps
+from logging import Logger
 from typing import Any, Dict, Optional, Text, Tuple
 
 import boto3
@@ -13,6 +13,7 @@ from sentry_sdk.client import Client
 
 from .log import setup_logger
 
+ULILS_LOGGER = setup_logger('utils', logging.DEBUG)
 
 def pick(path: str, d: dict):
     # path e.g. "a.b.c"
@@ -137,9 +138,14 @@ def setup_sentry(
         geff_dsn (Optional[str]): The DSN URL for the geff Sentry project.
         sentry_driver_dsn (Optional[str]): The DSN URL for the snowflake-errors Sentry project.
     """
+    ULILS_LOGGER.debug('Setting up sentry_sdk.')
+
     if geff_dsn and sentry_driver_dsn:
+        ULILS_LOGGER.debug('Both DSNs were provided. Initializing Sentry clients and loggers.')
+
         geff_client = Client(dsn=geff_dsn)
         sentry_client = Client(dsn=sentry_driver_dsn)
+        ULILS_LOGGER.debug(f'Clients {geff_client} and {sentry_client} have both been instantiated.')
 
         def send_event(event):
             if  event.get('logger') == 'sentry_driver':
@@ -151,6 +157,7 @@ def setup_sentry(
             transport=send_event,
             max_breadcrumbs=10,
         )
+        ULILS_LOGGER.debug('sentry_sdk has been initialized.')
 
     return (
         setup_logger(logger_name='console', level=logging.DEBUG),

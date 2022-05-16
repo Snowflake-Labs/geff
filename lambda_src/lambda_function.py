@@ -15,7 +15,6 @@ from .utils import (create_response, format, invoke_process_lambda,
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(dir_path, 'site-packages'))
 
-
 GEFF_DSN = os.environ.get("GEFF_DSN")
 SENTRY_DRIVER_DSN = os.environ.get("SENTRY_DRIVER_DSN")
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = setup_sentry(GEFF_DSN, SENTRY_DRIVER_DSN)
