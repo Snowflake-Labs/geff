@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 from ..log import get_loggers
-from ..utils import parse_header_links, pick
+from ..utils import parse_header_links, pick, create_response
 from ..vault import decrypt_if_encrypted
 
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
@@ -178,7 +178,7 @@ def process_row(
                 'reason': str(e.reason),
                 'host': req_host,
             }
-            GEFF_SENTRY_LOGGER.exception(e)
+            CONSOLE_LOGGER.exception(e)
         except JSONDecodeError as e:
             result = {
                 'error': 'JSONDecodeError' if raw_response else 'No Content',
@@ -186,7 +186,10 @@ def process_row(
                 'status': res.status,
                 'responded_at': response_date,
             }
+            CONSOLE_LOGGER.exception(e)
+        except Exception as e:
             GEFF_SENTRY_LOGGER.exception(e)
+            return create_response(500, 'Internal Server Error. Check GEFF logs for details.')
 
         if req_cursor and isinstance(result, list):
             row_data += result
