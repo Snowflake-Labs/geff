@@ -26,24 +26,20 @@ def process_row(
     """
     CONSOLE_LOGGER.info(f'sentry_logger driver invoked.')
 
-    try:
-        with push_scope() as scope:
-            scope.set_extra('history_url', history_url)
-            sentry_sdk.set_tag(
-                (
-                    'PIPE_NAME'
-                    if history_type in ('copy', 'COPY')
-                    else 'TASK_NAME'
-                    if history_type in ('task', 'TASK')
-                    else 'QUERY_ID'
-                ),
-                name
-            )
-            sentry_sdk.set_tag('error', error)
-            sentry_sdk.set_tag('error_time', ts)
-            sentry_sdk.set_tag('history_type', history_type)
-            SENTRY_DRIVER_LOGGER.exception(error)
-        return f'Captured {name} error at {ts}.'
-    except Exception as e:
-        GEFF_SENTRY_LOGGER.exception(e)
-        return f'Failed to captured {name} error at {ts}.'
+    with push_scope() as scope:
+        scope.set_extra('history_url', history_url)
+        sentry_sdk.set_tag(
+            (
+                'PIPE_NAME'
+                if history_type in ('copy', 'COPY')
+                else 'TASK_NAME'
+                if history_type in ('task', 'TASK')
+                else 'QUERY_ID'
+            ),
+            name
+        )
+        sentry_sdk.set_tag('error', error)
+        sentry_sdk.set_tag('error_time', ts)
+        sentry_sdk.set_tag('history_type', history_type)
+        SENTRY_DRIVER_LOGGER.exception(error)
+    return f'Captured {name} error at {ts}.'
