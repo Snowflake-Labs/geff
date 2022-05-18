@@ -9,10 +9,6 @@ from ..log import get_loggers
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
 def process_row(
-    account: str,
-    region: str,
-    database: str,
-    schema: str,
     name: str,
     history_type: str,
     error: str,
@@ -22,10 +18,6 @@ def process_row(
     """Each row is sent to Sentry via the SENTRY_DRIVER_LOGGER
 
     Args:
-        account (str): The Snowflake account name.
-        region (str): Region of the Snowflake account.
-        database (str): The DB.
-        schema (str): The schema.
         name (str): The object name.
         history_type (str): pipe or task or query.
         error (str): The actual error message.
