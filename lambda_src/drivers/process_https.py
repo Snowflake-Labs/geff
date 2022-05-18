@@ -187,9 +187,6 @@ def process_row(
                 'responded_at': response_date,
             }
             CONSOLE_LOGGER.exception(e)
-        except Exception as e:
-            GEFF_SENTRY_LOGGER.exception(e)
-            return create_response(500, 'Internal Server Error. Check GEFF logs for details.')
 
         if req_cursor and isinstance(result, list):
             row_data += result
