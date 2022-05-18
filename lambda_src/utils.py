@@ -92,7 +92,7 @@ def format(s, ps):
             s = s.replace(old, new)
         return s
 
-    m = re.match('{(\d+)}', s)
+    m = re.match(r'{(\d+)}', s)
     return ps[int(m.group(1))] if m else replace_refs(s, ps)
 
 
