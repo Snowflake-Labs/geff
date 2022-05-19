@@ -171,14 +171,12 @@ def process_row(
                     else response_body
                 ),
             }
-            CONSOLE_LOGGER.exception(e)
         except URLError as e:
             result = {
                 'error': f'URLError',
                 'reason': str(e.reason),
                 'host': req_host,
             }
-            CONSOLE_LOGGER.exception(e)
         except JSONDecodeError as e:
             result = {
                 'error': 'JSONDecodeError' if raw_response else 'No Content',
@@ -186,7 +184,9 @@ def process_row(
                 'status': res.status,
                 'responded_at': response_date,
             }
-            CONSOLE_LOGGER.exception(e)
+        # Send unhandled exceptions to Sentry
+        except Exception as e:
+            GEFF_SENTRY_LOGGER.exception(e)
 
         if req_cursor and isinstance(result, list):
             row_data += result

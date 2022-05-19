@@ -197,17 +197,22 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     destination = headers.get(DESTINATION_URI_HEADER)
     batch_id = headers.get(BATCH_ID_HEADER)
 
-    # httpMethod doesn't exist implies caller is base lambda.
-    # This is required to break an infinite loop of child lambda creation.
-    if not method:
-        return sync_flow(event, context)
+    try:
+        # httpMethod doesn't exist implies caller is base lambda.
+        # This is required to break an infinite loop of child lambda creation.
+        if not method:
+            return sync_flow(event, context)
 
-    # httpMethod exists implies caller is API Gateway
-    if method == 'POST' and destination:
-        return async_flow_init(event, context)
-    elif method == 'POST':
-        return sync_flow(event, context)
-    elif method == 'GET':
-        return async_flow_poll(destination, batch_id)
+        # httpMethod exists implies caller is API Gateway
+        if method == 'POST' and destination:
+            return async_flow_init(event, context)
+        elif method == 'POST':
+            return sync_flow(event, context)
+        elif method == 'GET':
+            return async_flow_poll(destination, batch_id)
 
-    return create_response(400, 'Unexpected Request.')
+        return create_response(400, 'Unexpected Request.')
+    # Send unhandled exceptions to Sentry.
+    except Exception as e:
+        GEFF_SENTRY_LOGGER.exception(e)
+        return create_response(500, 'Internal Server Error. Check GEFF logs for details.')

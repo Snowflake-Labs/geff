@@ -25,7 +25,6 @@ def process_row(
         history_url (str): URL of the erroring object in history.
     """
     CONSOLE_LOGGER.info(f'sentry_logger driver invoked.')
-    status: Optional[str] = None
 
     try:
         with push_scope() as scope:
@@ -44,8 +43,7 @@ def process_row(
             sentry_sdk.set_tag('error_time', ts)
             sentry_sdk.set_tag('history_type', history_type)
             SENTRY_DRIVER_LOGGER.exception(error)
-        status = f'Captured {name} error at {ts}.'
+        return f'Captured {name} error at {ts}.'
     except Exception as e:
         GEFF_SENTRY_LOGGER.exception(e)
-        status = f'Failed to captured {name} error at {ts}.'
-    return status
+        return f'Failed to captured {name} error at {ts}.'
