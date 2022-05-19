@@ -1,6 +1,3 @@
-from urllib.parse import urlencode
-from typing import Optional
-
 import sentry_sdk
 from sentry_sdk import push_scope
 
@@ -8,13 +5,14 @@ from ..log import get_loggers
 
 CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
+
 def process_row(
     name: str,
     history_type: str,
     error: str,
     ts: str,
     history_url: str,
-):
+) -> str:
     """Each row is sent to Sentry via the SENTRY_DRIVER_LOGGER
 
     Args:
