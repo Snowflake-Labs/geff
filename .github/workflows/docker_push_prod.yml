@@ -6,7 +6,7 @@ on:
       - "v*"
 
 env:
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: geff
 
 jobs:
   container_builder:
