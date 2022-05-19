@@ -3,7 +3,15 @@ name: deploy-to-dev
 on:
   push:
     branches:
-      - main
+      - "main"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "main"
+
+env:
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   container_builder:
@@ -15,17 +23,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Configure AWS Credentials 
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: us-west-2
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker meta
+        id: meta
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}
+
       - name: Build and push Docker images
         uses: docker/build-push-action@v2
         with:
           context: .
-          push: true
-          tags: ${{ secrets.ECR_REGISTRY_TAG_DEV }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Log out of Amazon ECR
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
