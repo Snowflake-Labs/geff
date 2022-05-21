@@ -64,19 +64,3 @@ def setup_logger(logger_name: str, level: int = logging.INFO) -> Logger:
     l = logging.getLogger(logger_name)
     l.setLevel(level)
     return l
-
-
-def get_loggers() -> Tuple[Logger, Logger, Logger]:
-    """Returns 3 loggers:
-    1. Console only logger
-    2. Sentry + Console logger
-    3. Sentry driver logger
-
-    Returns:
-        Tuple[Any]: Returns the 3 Logger objects.
-    """
-    return (
-        logging.getLogger(name='console'),
-        logging.getLogger(name='geff'),
-        logging.getLogger(name='sentry_driver'),
-    )

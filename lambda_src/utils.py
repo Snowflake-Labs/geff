@@ -15,6 +15,7 @@ from .log import setup_logger
 
 ULILS_LOGGER = setup_logger('utils', logging.DEBUG)
 
+
 def pick(path: str, d: dict):
     # path e.g. "a.b.c"
     retval: Optional[Any] = d

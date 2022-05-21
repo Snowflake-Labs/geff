@@ -7,7 +7,7 @@ from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
-from .log import format_trace, get_loggers
+from .log import format_trace
 from .utils import (create_response, format, invoke_process_lambda,
                     setup_sentry, zip)
 
