@@ -1,18 +1,19 @@
+import logging
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
 from json import JSONDecodeError, dumps, loads
-from re import match
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
-from ..log import get_loggers
-from ..utils import parse_header_links, pick, create_response
+from ..utils import parse_header_links, pick
 from ..vault import decrypt_if_encrypted
 
-CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
+CONSOLE_LOGGER = logging.getLogger('console')
+GEFF_SENTRY_LOGGER = logging.getLogger('geff')
+SENTRY_DRIVER_LOGGER = logging.getLogger('sentry_driver')
 
 
 def make_basic_header(auth):

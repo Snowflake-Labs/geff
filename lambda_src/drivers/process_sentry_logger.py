@@ -1,12 +1,12 @@
-from urllib.parse import urlencode
-from typing import Optional
+import logging
 
 import sentry_sdk
 from sentry_sdk import push_scope
 
-from ..log import get_loggers
+CONSOLE_LOGGER = logging.getLogger('console')
+GEFF_SENTRY_LOGGER = logging.getLogger('geff')
+SENTRY_DRIVER_LOGGER = logging.getLogger('sentry_driver')
 
-CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 
 def process_row(
     name: str,

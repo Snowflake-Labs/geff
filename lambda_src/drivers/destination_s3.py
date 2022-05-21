@@ -1,15 +1,16 @@
 import json
+import logging
 import os
 from random import sample
-from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
+from typing import (Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple,
+                    Union)
 from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
-from ..log import get_loggers
 
+CONSOLE_LOGGER = logging.getLogger('console')
 
-CONSOLE_LOGGER, GEFF_SENTRY_LOGGER, SENTRY_DRIVER_LOGGER = get_loggers()
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
 AWS_REGION = os.environ[
@@ -147,6 +148,7 @@ def finalize(
 def check_status(destination: Text, batch_id: Text) -> Optional[Text]:
     bucket, _ = parse_destination_uri(destination)
     prefixed_filename = f'{MANIESTS_FOLDER_NAME}/{batch_id}_{MANIFEST_FILENAME}'
+
     try:
         response_obj = S3_CLIENT.get_object(Bucket=bucket, Key=prefixed_filename)
         content = response_obj['Body']
