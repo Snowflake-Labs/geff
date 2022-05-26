@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
-from ..utils import LOG, parse_header_links, pick
+from ..utils import LOG, parse_header_links, pick, zip
 from ..vault import decrypt_if_encrypted
 
 
@@ -126,11 +126,16 @@ def process_row(
             response_headers = dict(res.getheaders())
             res_body = res.read()
             LOG.debug(f'Got the response body with length: {len(res_body)}')
-
-            raw_response = (
-                decompress(res_body)
-                if res.headers.get('Content-Encoding') == 'gzip'
+            #Adding zip line below
+            zipped_response = (
+                zip(dumps(res_body)) 
+                if res.headers.get('Accept-Encoding') == 'gzip' 
                 else res_body
+            )
+            raw_response = (
+                decompress(zipped_response)
+                if res.headers.get('Content-Encoding') == 'gzip'
+                else zipped_response
             )
             response_date = (
                 parsedate_to_datetime(response_headers['Date']).isoformat()
