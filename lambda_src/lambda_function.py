@@ -97,7 +97,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
 
     batch_id = headers[BATCH_ID_HEADER]
-    response_encoding = headers.pop('sf-custom-response-encoding', None)
+    #response_encoding = headers.pop('sf-custom-response-encoding', None)
+    accept_encoding = headers.pop('sf-custom-accept-encoding', None)
     write_uri = headers.get('write-uri')
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
@@ -139,7 +140,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         res_data.append(
             [
                 row_number,
-                zip(dumps(row_result)) if response_encoding == 'gzip' else row_result,
+                zip(dumps(row_result)) if accept_encoding == 'gzip' else row_result,
             ]
         )
 
