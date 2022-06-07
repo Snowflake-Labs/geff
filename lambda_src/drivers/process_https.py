@@ -126,16 +126,18 @@ def process_row(
             response_headers = dict(res.getheaders())
             res_body = res.read()
             LOG.debug(f'Got the response body with length: {len(res_body)}')
-            #Adding zip line below
+            """
+            #---------------Adding zip line below------------
             zipped_response = (
                 zip(dumps(res_body)) 
                 if res.headers.get('Accept-Encoding') == 'gzip' 
                 else res_body
             )
+            """
             raw_response = (
-                decompress(zipped_response)
+                decompress(res_body)
                 if res.headers.get('Content-Encoding') == 'gzip'
-                else zipped_response
+                else res_body
             )
             response_date = (
                 parsedate_to_datetime(response_headers['Date']).isoformat()
