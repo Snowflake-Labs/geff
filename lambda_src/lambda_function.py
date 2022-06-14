@@ -5,6 +5,8 @@ from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
+import gzip
+import base64
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda, zip
@@ -150,7 +152,11 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
-        response = {'statusCode': 200, 'body': data_dumps}
+        #response = {'statusCode': 200, 'body': data_dumps}
+        response = {'statusCode': 200,
+        'body': base64.b64encode(gzip.compress(data_dumps.encode())).decode(),
+        'isBase64Encoded': True,
+        'headers': {'Content-Encoding': 'gzip'}}
 
     if len(response) > 6_000_000:
         response = dumps(
