@@ -158,7 +158,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         'isBase64Encoded': True,
         'headers': {'Content-Encoding': 'gzip'}}
 
-    if len(response) > 6_000_000:
+    if len(response['body']) > 6_000_000:
         response = dumps(
             {
                 'data': [
