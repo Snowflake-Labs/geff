@@ -13,10 +13,10 @@ from .utils import LOG, create_response, format, invoke_process_lambda, zip
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(dir_path, 'site-packages'))
+sys.path.append(os.path.join(dir_path, "site-packages"))
 
-BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
-DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
+BATCH_ID_HEADER = "sf-external-function-query-batch-id"
+DESTINATION_URI_HEADER = "sf-custom-destination-uri"
 
 
 def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
@@ -30,30 +30,30 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response state and data.
     """
-    LOG.debug('Found a destination header and hence using async_flow_init().')
+    LOG.debug("Found a destination header and hence using async_flow_init().")
 
-    headers = event['headers']
+    headers = event["headers"]
     batch_id = headers[BATCH_ID_HEADER]
     destination = headers[DESTINATION_URI_HEADER]
     headers.pop(DESTINATION_URI_HEADER)
-    headers['write-uri'] = destination
+    headers["write-uri"] = destination
     lambda_name = context.function_name
-    LOG.debug(f'async_flow_init() received destination: {destination}.')
+    LOG.debug(f"async_flow_init() received destination: {destination}.")
 
     destination_driver = import_module(
-        f'geff.drivers.destination_{urlparse(destination).scheme}'
+        f"geff.drivers.destination_{urlparse(destination).scheme}"
     )
     # Ignoring style due to dynamic import
     destination_driver.initialize(destination, batch_id)  # type: ignore
 
-    LOG.debug('Invoking child lambda.')
+    LOG.debug("Invoking child lambda.")
     lambda_response = invoke_process_lambda(event, lambda_name)
-    if lambda_response['StatusCode'] != 202:
-        LOG.debug('Child lambda returned a non-202 status.')
-        return create_response(400, 'Error invoking child lambda.')
+    if lambda_response["StatusCode"] != 202:
+        LOG.debug("Child lambda returned a non-202 status.")
+        return create_response(400, "Error invoking child lambda.")
     else:
-        LOG.debug('Child lambda returned 202.')
-        return {'statusCode': 202}
+        LOG.debug("Child lambda returned 202.")
+        return {"statusCode": 202}
 
 
 def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
@@ -68,19 +68,19 @@ def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
         Dict[Text, Any]: This is the return value with the status code of 200 or 202
         as per the status of the write.
     """
-    LOG.debug('async_flow_poll() called as destination header was not found in a GET.')
+    LOG.debug("async_flow_poll() called as destination header was not found in a GET.")
     destination_driver = import_module(
-        f'geff.drivers.destination_{urlparse(destination).scheme}'
+        f"geff.drivers.destination_{urlparse(destination).scheme}"
     )
 
     # Ignoring style due to dynamic import
     status_body = destination_driver.check_status(destination, batch_id)  # type: ignore
     if status_body:
-        LOG.debug(f'Manifest found return status code 200.')
-        return {'statusCode': 200, 'body': status_body}
+        LOG.debug(f"Manifest found return status code 200.")
+        return {"statusCode": 200, "body": status_body}
     else:
-        LOG.debug(f'Manifest not found return status code 202.')
-        return {'statusCode': 202}
+        LOG.debug(f"Manifest not found return status code 202.")
+        return {"statusCode": 202}
 
 
 def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
@@ -94,38 +94,38 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response status and data.
     """
-    LOG.debug('Destination header not found in a POST and hence using sync_flow().')
-    headers = event['headers']
-    req_body = loads(event['body'])
+    LOG.debug("Destination header not found in a POST and hence using sync_flow().")
+    headers = event["headers"]
+    req_body = loads(event["body"])
 
     batch_id = headers[BATCH_ID_HEADER]
-    response_encoding = headers.pop('sf-custom-response-encoding', None)
-    write_uri = headers.get('write-uri')
-    LOG.debug(f'sync_flow() received destination: {write_uri}.')
+    response_encoding = headers.pop("sf-custom-response-encoding", None)
+    write_uri = headers.get("write-uri")
+    LOG.debug(f"sync_flow() received destination: {write_uri}.")
 
     if write_uri:
         destination_driver = import_module(
-            f'geff.drivers.destination_{urlparse(write_uri).scheme}'
+            f"geff.drivers.destination_{urlparse(write_uri).scheme}"
         )
     res_data = []
 
-    for row_number, *args in req_body['data']:
+    for row_number, *args in req_body["data"]:
         row_result = []
         process_row_params = {
-            k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
+            k.replace("sf-custom-", "").replace("-", "_"): format(v, args)
             for k, v in headers.items()
-            if k.startswith('sf-custom-')
+            if k.startswith("sf-custom-")
         }
 
         try:
-            driver, *path = event['path'].lstrip('/').split('/')
-            driver = driver.replace('-', '_')
-            driver_module = f'geff.drivers.process_{driver}'
+            driver, *path = event["path"].lstrip("/").split("/")
+            driver = driver.replace("-", "_")
+            driver_module = f"geff.drivers.process_{driver}"
             process_row = import_module(
                 driver_module, package=None
             ).process_row  # type: ignore
 
-            LOG.debug(f'Invoking process_row for the driver {driver_module}.')
+            LOG.debug(f"Invoking process_row for the driver {driver_module}.")
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
@@ -136,12 +136,12 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 )
 
         except Exception as e:
-            row_result = [{'error': repr(e), 'trace': format_trace(e)}]
+            row_result = [{"error": repr(e), "trace": format_trace(e)}]
 
         res_data.append(
             [
                 row_number,
-                zip(dumps(row_result)) if response_encoding == 'gzip' else row_result,
+                zip(dumps(row_result)) if response_encoding == "gzip" else row_result,
             ]
         )
 
@@ -151,27 +151,28 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             write_uri, batch_id, res_data
         )
     else:
-        data_dumps = dumps({'data': res_data}, default=str)
-        #response = {'statusCode': 200, 'body': data_dumps}
-        response = {'statusCode': 200,
-        'body': base64.b64encode(gzip.compress(data_dumps.encode())).decode(),
-        'isBase64Encoded': True,
-        'headers': {'Content-Encoding': 'gzip'}}
+        data_dumps = dumps({"data": res_data}, default=str)
+        response = {
+            "statusCode": 200,
+            "body": base64.b64encode(gzip.compress(data_dumps.encode())).decode(),
+            "isBase64Encoded": True,
+            "headers": {"Content-Encoding": "gzip"}
+        }
 
-    if len(response['body']) > 6_000_000:
+    if len(response["body"]) > 6_000_000:
         response = dumps(
             {
-                'data': [
+                "data": [
                     [
                         rn,
                         {
-                            'error': (
-                                f'Response size ({len(response)} bytes) will likely'
-                                'exceeded maximum allowed payload size (6291556 bytes).'
+                            "error": (
+                                f"Response size ({len(response)} bytes) will likely"
+                                "exceeded maximum allowed payload size (6291556 bytes)."
                             )
                         },
                     ]
-                    for rn, *args in req_body['data']
+                    for rn, *args in req_body["data"]
                 ]
             }
         )
@@ -190,9 +191,9 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Returns the response body.
     """
-    method = event.get('httpMethod')
-    headers = event['headers']
-    LOG.debug(f'lambda_handler() called.')
+    method = event.get("httpMethod")
+    headers = event["headers"]
+    LOG.debug(f"lambda_handler() called.")
 
     destination = headers.get(DESTINATION_URI_HEADER)
     batch_id = headers.get(BATCH_ID_HEADER)
@@ -203,11 +204,11 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
         return sync_flow(event, context)
 
     # httpMethod exists implies caller is API Gateway
-    if method == 'POST' and destination:
+    if method == "POST" and destination:
         return async_flow_init(event, context)
-    elif method == 'POST':
+    elif method == "POST":
         return sync_flow(event, context)
-    elif method == 'GET':
+    elif method == "GET":
         return async_flow_poll(destination, batch_id)
 
-    return create_response(400, 'Unexpected Request.')
+    return create_response(400, "Unexpected Request.")
