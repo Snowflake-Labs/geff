@@ -154,7 +154,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         data_dumps = dumps({'data': res_data}, default=str)
         response = {
             'statusCode': 200,
-            'body': base64.b64encode(gzip.compress(data_dumps.encode())).decode(),
+            'body': b64encode(compress(data_dumps.encode())).decode(),
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'}
         }
