@@ -1,12 +1,12 @@
 import os
 import os.path
 import sys
+from base64 import b64encode
+from gzip import compress
 from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
-import gzip
-import base64
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda, zip
@@ -159,7 +159,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'headers': {'Content-Encoding': 'gzip'}
         }
 
-    if len(response['body']) > 6_000_000:
+    if len(response) > 6_000_000:
         response = dumps(
             {
                 'data': [
