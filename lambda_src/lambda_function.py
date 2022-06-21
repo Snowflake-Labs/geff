@@ -141,7 +141,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         res_data.append(
             [
                 row_number,
-                zip(dumps(row_result)) if response_encoding == 'gzip' else row_result,
+                row_result,
             ]
         )
 
