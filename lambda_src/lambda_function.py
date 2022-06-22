@@ -99,7 +99,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
 
     batch_id = headers[BATCH_ID_HEADER]
-    response_encoding = headers.pop('sf-custom-response-encoding', None)
     write_uri = headers.get('write-uri')
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
