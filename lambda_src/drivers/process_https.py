@@ -126,7 +126,7 @@ def process_row(
             response_headers = dict(res.getheaders())
             res_body = res.read()
             LOG.debug(f'Got the response body with length: {len(res_body)}')
-            
+
             raw_response = (
                 decompress(res_body)
                 if res.headers.get('Content-Encoding') == 'gzip'
