@@ -59,23 +59,6 @@ def parse_header_links(value):
     return links
 
 
-def zip(s, chunk_size=1_000_000):
-    """zip in pieces, as it is tough to inflate large chunks in
-    Snowflake per UDF mem limits
-
-    Args:
-        s ([type]): [description]
-        chunk_size ([type], optional): [description]. Defaults to 1_000_000.
-    """
-
-    def do_zip(s):
-        return encode(encode(s.encode(), encoding='zlib'), 'base64').decode()
-
-    if len(s) > chunk_size:
-        return [do_zip(s[:chunk_size])] + zip(s[chunk_size:], chunk_size)
-    return [do_zip(s)]
-
-
 def format(s, ps):
     """format string s with params ps, preserving type of singular references
 

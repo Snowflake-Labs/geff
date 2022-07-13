@@ -1,13 +1,15 @@
 import os
 import os.path
 import sys
+from base64 import b64encode
+from gzip import compress
 from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda, zip
+from .utils import LOG, create_response, format, invoke_process_lambda
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -97,7 +99,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
 
     batch_id = headers[BATCH_ID_HEADER]
-    response_encoding = headers.pop('sf-custom-response-encoding', None)
     write_uri = headers.get('write-uri')
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
@@ -139,7 +140,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         res_data.append(
             [
                 row_number,
-                zip(dumps(row_result)) if response_encoding == 'gzip' else row_result,
+                row_result,
             ]
         )
 
@@ -150,7 +151,12 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
-        response = {'statusCode': 200, 'body': data_dumps}
+        response = {
+            'statusCode': 200,
+            'body': b64encode(compress(data_dumps.encode())).decode(),
+            'isBase64Encoded': True,
+            'headers': {'Content-Encoding': 'gzip'}
+        }
 
     if len(response) > 6_000_000:
         response = dumps(
