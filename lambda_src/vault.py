@@ -6,12 +6,12 @@ import boto3
 from botocore.exceptions import ClientError, HTTPClientError
 
 
-SA_KMS_REGION = environ.get('SA_KMS_REGION', 'us-west-2')
-KMS_KEY = environ.get('SA_KMS_KEY')
+AWS_REGION = environ.get('AWS_REGION')
+KMS_KEY = environ.get('AWS_REGION')
 ENABLED = bool(KMS_KEY)
 
-kms = boto3.client('kms', region_name=SA_KMS_REGION)
-secretsmanager = boto3.client('secretsmanager', region_name=SA_KMS_REGION)
+kms = boto3.client('kms', region_name=AWS_REGION)
+secretsmanager = boto3.client('secretsmanager', region_name=AWS_REGION)
 
 
 def decrypt_if_encrypted(
