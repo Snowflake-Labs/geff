@@ -20,7 +20,7 @@ def decrypt_if_encrypted(
     if envar:
         ct = environ.get(envar)
 
-    if ct and ct.startswith('arn:aws:secretsmanager:'):
+    if ct and (ct.startswith('arn:aws:secretsmanager:') or ct.startswith('arn:aws-us-gov:secretsmanager:')):
         return secretsmanager.get_secret_value(SecretId=ct).get('SecretString')
 
     # 1-byte plaintext has 205-byte ct
