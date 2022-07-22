@@ -62,7 +62,6 @@ def process_row(
     if auth:
         auth = decrypt_if_encrypted(auth)
 
-        print(f"auth: {auth}")
         req_auth = (
             loads(auth)
             if auth and auth.startswith('{')
