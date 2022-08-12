@@ -3,6 +3,7 @@ import os
 from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
+import time
 
 import boto3
 from botocore.exceptions import ClientError
@@ -31,7 +32,7 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
-    prefix = parsed_url.path.split('/', 2)[1] if parsed_url.path.count('/') >= 2 else ''
+    prefix = parsed_url.path.strip('/') if parsed_url.path.count('/') >= 1 else ''
     LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
@@ -105,11 +106,12 @@ def write(
         if isinstance(datum, list)
         else json.dumps(datum, default=str)
     )
+    date = time.strftime("%Y-%m-%d")
 
     if not prefix:
-        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}.data.json'
+        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}-{date}.data.json'
     else:
-        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}.data.json'
+        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}-{date}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
