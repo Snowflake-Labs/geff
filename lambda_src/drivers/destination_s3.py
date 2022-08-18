@@ -112,7 +112,7 @@ def write(
         if isinstance(datum, list)
         else json.dumps(datum, default=str)
     )
-    
+
     if not prefix:
         prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}.data.json'
     else:
