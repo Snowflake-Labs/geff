@@ -32,7 +32,13 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
-    prefix = parsed_url.path.strip('/') if parsed_url.path.count('/') >= 1 else ''
+        
+    parts = parsed_url.path.split('/')
+    prefix_parts = [part for part in parts if not part.startswith('%') and part]
+    strftime_parts = [time.strftime(part) for part in parts if part.startswith('%')]
+
+    prefix_with_time = "/".join(prefix_parts + strftime_parts)
+    prefix = prefix_with_time if parsed_url.path.count('/') >= 1 else ''
     LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
@@ -106,12 +112,11 @@ def write(
         if isinstance(datum, list)
         else json.dumps(datum, default=str)
     )
-    date = time.strftime("%Y-%m-%d")
-
+    
     if not prefix:
-        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}-{date}.data.json'
+        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}.data.json'
     else:
-        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}-{date}.data.json'
+        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
