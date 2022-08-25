@@ -32,13 +32,9 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
-        
     parts = parsed_url.path.split('/')
-    prefix_parts = [part for part in parts if not part.startswith('%') and part]
-    strftime_parts = [time.strftime(part) for part in parts if part.startswith('%')]
-
-    prefix_with_time = "/".join(prefix_parts + strftime_parts)
-    prefix = prefix_with_time if parsed_url.path.count('/') >= 1 else ''
+    prefix = "/".join([x for x in parts if x]) 
+    prefix = time.strftime(prefix) if parsed_url.path.count('/') >= 1 else ''
     LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
@@ -93,7 +89,7 @@ def initialize(destination, batch_id: Text):
     bucket, prefix = parse_destination_uri(destination)
     content = ''  # We use empty body for creating a folder
     if not prefix:
-        prefixed_folder_path = f'{DATA_FOLDER_NAME}/{batch_id}/'
+        prefixed_folder_path = f'{batch_id}/'
     else:
         prefixed_folder_path = f'{prefix}/{batch_id}/'
 
@@ -114,7 +110,7 @@ def write(
     )
 
     if not prefix:
-        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}.data.json'
+        prefixed_filename = f'{batch_id}/row-{row_index}.data.json'
     else:
         prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
