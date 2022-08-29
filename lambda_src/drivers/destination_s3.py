@@ -16,7 +16,6 @@ AWS_REGION = os.environ[
 ]  # Placeholder while in dev TODO: change as variable/header
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
-DATA_FOLDER_NAME = 'data'
 MANIESTS_FOLDER_NAME = 'meta'
 
 
