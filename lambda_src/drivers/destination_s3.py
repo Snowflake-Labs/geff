@@ -3,7 +3,7 @@ import os
 from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
-import time
+from time import strftime
 
 import boto3
 from botocore.exceptions import ClientError
@@ -31,9 +31,9 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
-    parts = parsed_url.path.split('/')
-    prefix = "/".join([x for x in parts if x]) 
-    prefix = time.strftime(prefix) if parsed_url.path.count('/') >= 1 else ''
+    parts = strftime(parsed_url.path).split('/')
+    prefix = "/".join([x for x in parts if x])
+    prefix = prefix if parsed_url.path.count('/') >= 1 else ''
     LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
