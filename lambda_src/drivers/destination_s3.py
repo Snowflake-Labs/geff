@@ -31,9 +31,7 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     bucket = parsed_url.netloc
-    parts = strftime(parsed_url.path).split('/')
-    prefix = "/".join([x for x in parts if x])
-    prefix = prefix if parsed_url.path.count('/') >= 1 else ''
+    prefix = strftime(parsed_url.path).lstrip('/') if parsed_url.path.count('/') >= 1 else ''
     LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
     return bucket, prefix
 
@@ -84,15 +82,17 @@ def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any
     )
 
 
-def initialize(destination, batch_id: Text):
+def initialize(destination: Text):
     bucket, prefix = parse_destination_uri(destination)
     content = ''  # We use empty body for creating a folder
-    if not prefix:
-        prefixed_folder_path = f'{batch_id}/'
-    else:
-        prefixed_folder_path = f'{prefix}/{batch_id}/'
+    prefixed_folder_path = ''
+    if prefix and prefix.count('/') and not prefix.endswith('/'):
+        prefixed_folder_path = '/'.join(prefix.split('/')[:-1]) + '/'
+    elif prefix.endswith('/'):
+        prefixed_folder_path = prefix
 
-    return write_to_s3(bucket, prefixed_folder_path, content)
+    if prefixed_folder_path:
+        return write_to_s3(bucket, prefixed_folder_path, content)
 
 
 def write(
@@ -109,9 +109,11 @@ def write(
     )
 
     if not prefix:
-        prefixed_filename = f'{batch_id}/row-{row_index}.data.json'
+        prefixed_filename = f'{batch_id}-row-{row_index}.data.json'
+    elif prefix.endswith('/'):
+        prefixed_filename = f'{prefix}{batch_id}-row-{row_index}.data.json'
     else:
-        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}.data.json'
+        prefixed_filename = f'{prefix}-{batch_id}-row-{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
