@@ -4,6 +4,7 @@ from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
 from time import strftime
+import re
 
 import boto3
 from botocore.exceptions import ClientError
@@ -85,13 +86,9 @@ def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any
 def initialize(destination: Text, batch_id: Text):
     bucket, prefix = parse_destination_uri(destination)
     content = ''  # We use empty body for creating a folder
-    prefixed_folder_path = ''
-    if prefix and prefix.count('/') and not prefix.endswith('/'):
-        # Removes characters after the last '/' in a path, since we want to initilaize a folder
-        # E.g. /a/b/c -> /a/b/
-        prefixed_folder_path = '/'.join(prefix.split('/')[:-1]) + '/' 
-    elif prefix.endswith('/'):
-        prefixed_folder_path = prefix
+    # Regex captures characters after and including the rightmost '/' in a path,
+    # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
+    prefixed_folder_path = re.sub(r'/[^/]*$', "/", prefix)
 
     if prefixed_folder_path:
         write_to_s3(bucket, prefixed_folder_path, content)
