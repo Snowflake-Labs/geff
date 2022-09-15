@@ -88,10 +88,10 @@ def initialize(destination: Text, batch_id: Text):
     content = ''  # We use empty body for creating a folder
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
-    prefixed_folder_path = re.sub(r'/[^/]*$', "/", prefix) if '/' in prefix else ''
+    prefix_folder = re.sub(r'/[^/]*$', "/", prefix) if '/' in prefix else ''
 
-    if prefixed_folder_path:
-        write_to_s3(bucket, prefixed_folder_path, content)
+    if prefix_folder:
+        write_to_s3(bucket, prefix_folder, content)
 
 
 def write(
