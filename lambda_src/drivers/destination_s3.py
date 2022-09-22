@@ -3,6 +3,8 @@ import os
 from random import sample
 from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
+from time import strftime
+import re
 
 import boto3
 from botocore.exceptions import ClientError
@@ -15,7 +17,6 @@ AWS_REGION = os.environ[
 ]  # Placeholder while in dev TODO: change as variable/header
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
-DATA_FOLDER_NAME = 'data'
 MANIESTS_FOLDER_NAME = 'meta'
 
 
@@ -30,10 +31,10 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     """
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
-    bucket = parsed_url.netloc
-    prefix = parsed_url.path.split('/', 2)[1] if parsed_url.path.count('/') >= 2 else ''
-    LOG.debug(f'Parsed bucket = {bucket}, prefix = {prefix}.')
-    return bucket, prefix
+    return (
+        parsed_url.netloc,
+        strftime(parsed_url.path[1:])  # remove leading slash
+    )
 
 
 def estimated_record_size(records: List[Dict[Text, Any]]) -> float:
@@ -82,15 +83,15 @@ def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any
     )
 
 
-def initialize(destination, batch_id: Text):
+def initialize(destination: Text, batch_id: Text):
     bucket, prefix = parse_destination_uri(destination)
     content = ''  # We use empty body for creating a folder
-    if not prefix:
-        prefixed_folder_path = f'{DATA_FOLDER_NAME}/{batch_id}/'
-    else:
-        prefixed_folder_path = f'{prefix}/{batch_id}/'
+    # Regex captures characters after and including the rightmost '/' in a path,
+    # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
+    prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
 
-    return write_to_s3(bucket, prefixed_folder_path, content)
+    if prefix_folder:
+        write_to_s3(bucket, prefix_folder, content)
 
 
 def write(
@@ -106,10 +107,7 @@ def write(
         else json.dumps(datum, default=str)
     )
 
-    if not prefix:
-        prefixed_filename = f'{DATA_FOLDER_NAME}/{batch_id}/row-{row_index}.data.json'
-    else:
-        prefixed_filename = f'{prefix}/{batch_id}/row-{row_index}.data.json'
+    prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
