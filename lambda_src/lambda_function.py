@@ -7,6 +7,7 @@ from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
+from time import sleep
 
 from .log import format_trace
 from .utils import (
@@ -14,6 +15,12 @@ from .utils import (
     create_response,
     format,
     invoke_process_lambda,
+)
+from .response_storage import (
+    initialize_dynamodb_item,
+    write_dynamodb_item,
+    check_if_initialized,
+    get_response,
 )
 
 # pip install --target ./site-packages -r requirements.txt
@@ -100,6 +107,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
+    batch_id = headers[BATCH_ID_HEADER]
+    batch_id_exists = check_if_initialized(batch_id)
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
 
@@ -109,6 +118,15 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         destination_driver = import_module(
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
+    else:
+        if not batch_id_exists:
+            initialize_dynamodb_item(batch_id)  # For the first Lambda
+        else:
+            while not get_response(batch_id) is None:  # For the subsequent Lambda
+                sleep(5)
+            if get_response(batch_id):
+                return get_response(batch_id)
+
     res_data = []
 
     for row_number, *args in req_body['data']:
@@ -160,6 +178,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
+        write_dynamodb_item(batch_id, response)
 
     response_length = len(dumps(response))
     if response_length > 6_291_556:
