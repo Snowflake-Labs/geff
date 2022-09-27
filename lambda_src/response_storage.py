@@ -1,8 +1,11 @@
 import boto3
+from os import environ
 from typing import Dict, Text, Any
 
 DYNAMODB_TABLE = 'geff-requests'
-dynamodb = boto3.resource('dynamodb')
+AWS_REGION = environ.get('AWS_REGION')
+
+dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
 table = dynamodb.Table(DYNAMODB_TABLE)
 
 def write_dynamodb_item(batch_id: Text, response: Dict):
