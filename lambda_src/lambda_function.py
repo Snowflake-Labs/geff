@@ -107,6 +107,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
+
     batch_id = headers[BATCH_ID_HEADER]
     batch_id_exists = check_if_initialized(batch_id)
     write_uri = headers.get('write-uri')
@@ -122,7 +123,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         if not batch_id_exists:
             initialize_dynamodb_item(batch_id)  # For the first Lambda
         else:
-            while not get_response(batch_id) is None:  # For the subsequent Lambda
+            while get_response(batch_id) is None:  # For the subsequent Lambda
                 sleep(5)
             if get_response(batch_id):
                 return get_response(batch_id)
