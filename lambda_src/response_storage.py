@@ -3,9 +3,13 @@ from typing import Dict, Text
 
 import boto3
 
+AWS_REGION = os.environ[
+    'AWS_REGION'
+]
 DYNAMODB_TABLE = 'geff-requests'
-dynamodb = boto3.resource('dynamodb', region_name=os.environ['AWS_REGION'])
-table = dynamodb.Table(DYNAMODB_TABLE)
+DYNAMODB_RESOURCE = boto3.resource('dynamodb', region_name=AWS_REGION)
+table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
+
 
 def write_dynamodb_item(batch_id: Text, response: Dict):
     """
