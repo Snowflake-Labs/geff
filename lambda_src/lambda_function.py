@@ -10,12 +10,7 @@ from urllib.parse import urlparse
 from time import sleep
 
 from .log import format_trace
-from .utils import (
-    LOG,
-    create_response,
-    format,
-    invoke_process_lambda,
-)
+from .utils import LOG, create_response, format, invoke_process_lambda
 from .response_storage import (
     initialize_dynamodb_item,
     write_dynamodb_item,
