@@ -101,7 +101,26 @@ def process_row(
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
+     elif json.startswith('arn'):
+        json if json.startswith('arn') 
+        auth = decrypt_if_encrypted(json)
+        req_auth = (
+        loads(auth)
+        if auth and auth.startswith('{')
+        else parse_header_dict(auth)
+        if auth
+        else {} 
+        ) 
+        auth_host = req_auth.get('host') 
+
+        # We reject the request if the 'auth' is present but doesn't match the pinned host.
+        if auth_host and req_host and auth_host != req_host:
+            raise ValueError(
+                "Requests can only be made to host provided in the auth header."
+            )
         req_headers['Content-Type'] = 'application/json'
+        if('ClientId' and 'secret' in req_auth):
+            req_data={"clientId": str(req_auth['ClientId']),"secret": str(req_auth['secret'])}
     else:
         req_data = None if data is None else data.encode()
 
