@@ -104,7 +104,6 @@ def process_row(
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
         if('Content-Type' in req_headers):
-            #remove the host part
             payload={"clientId":req_auth['clientId'],"secret":req_auth['secret']}
             req_data=dumps(payload).encode('utf-8')
         req_headers['Content-Type'] = 'application/json'
