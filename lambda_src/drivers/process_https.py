@@ -90,6 +90,8 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
+        elif 'clientId' and 'secret' in req_auth:
+            req_headers['Content-Type'] = 'application/json'
 
     # query, nextpage_path, results_path
     req_params: str = params
@@ -101,19 +103,10 @@ def process_row(
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
-        if json.startswith('arn'):
-            data=(decrypt_if_encrypted(json))
-            data=loads(data)
+        if('Content-Type' in req_headers):
             #remove the host part
-            json_host=data['host']
-            if json_host and req_host and json_host != req_host:
-                raise ValueError(
-                "Requests can only be made to host provided in the auth header."
-                )
-            if('clientId' and 'secret' in data):
-                LOG.debug('preparing hunters json')
-                payload={"clientId":data['clientId'],"secret":data['secret']}
-                req_data=dumps(payload).encode('utf-8')
+            payload={"clientId":req_auth['clientId'],"secret":req_auth['secret']}
+            req_data=dumps(payload).encode('utf-8')
         req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
