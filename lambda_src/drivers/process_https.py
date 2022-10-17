@@ -195,7 +195,7 @@ def process_row(
 
             next_url = (
                 cursor_value
-                if cursor_value and cursor_value.startswith('https://')
+                if cursor_value and isinstance(cursor_value, str) and cursor_value.startswith('https://')
                 else f'{req_url}&{cursor_param}={cursor_value}'
                 if cursor_value
                 else None
