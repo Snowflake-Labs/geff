@@ -28,7 +28,9 @@ def process_row(
     method: Text = 'get',
     headers: Text = '',
     kwargs: Union[Dict, Text] = '',
-    auth: Text = None,
+    #auth to auth header
+    auth_header: Text = None,
+    auth_body :Optional[Text] = None,
     params: Text = '',
     verbose: bool = False,
     cursor: Text = '',
@@ -103,9 +105,28 @@ def process_row(
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
-        if('Content-Type' in req_headers):
-            if auth:
-                payload={"clientId":req_auth['clientId'],"secret":req_auth['secret']}
+        if auth_payload:
+            auth = decrypt_if_encrypted(auth_payload)
+            req_auth = (
+                loads(auth)
+                if auth and auth.startswith('{')
+                else parse_header_dict(auth)
+                if auth
+                else {}
+            )
+            auth_host = req_auth.get('host')
+
+            # We reject the request if the 'auth' is present but doesn't match the pinned host.
+            if auth_host and req_host and auth_host != req_host:
+                raise ValueError(
+                    "Requests can only be made to host provided in the auth header."
+                )
+            # If the URL is missing a hostname, use the host from the auth dictionary
+            elif auth_host and not req_host:
+                req_host = auth_host
+            # We make unauthenticated request if the 'host' key is missing.
+            elif not auth_host:
+                raise ValueError(f"'auth' missing the 'host' key.")
                 req_data=dumps(payload).encode('utf-8')
         req_headers['Content-Type'] = 'application/json'
     else:
