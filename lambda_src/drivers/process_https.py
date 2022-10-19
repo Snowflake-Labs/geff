@@ -29,8 +29,7 @@ def process_row(
     headers: Text = '',
     kwargs: Union[Dict, Text] = '',
     #auth to auth header
-    auth_header: Text = None,
-    auth_body :Optional[Text] = None,
+    auth: Text = None,
     params: Text = '',
     verbose: bool = False,
     cursor: Text = '',
@@ -92,8 +91,8 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
-        elif 'clientId' and 'secret' in req_auth:
-            req_headers['Content-Type'] = 'application/json'
+        elif 'body' in req_auth:
+            req_data=req_auth['body']
 
     # query, nextpage_path, results_path
     req_params: str = params
@@ -105,29 +104,6 @@ def process_row(
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
-        if auth_payload:
-            auth = decrypt_if_encrypted(auth_payload)
-            req_auth = (
-                loads(auth)
-                if auth and auth.startswith('{')
-                else parse_header_dict(auth)
-                if auth
-                else {}
-            )
-            auth_host = req_auth.get('host')
-
-            # We reject the request if the 'auth' is present but doesn't match the pinned host.
-            if auth_host and req_host and auth_host != req_host:
-                raise ValueError(
-                    "Requests can only be made to host provided in the auth header."
-                )
-            # If the URL is missing a hostname, use the host from the auth dictionary
-            elif auth_host and not req_host:
-                req_host = auth_host
-            # We make unauthenticated request if the 'host' key is missing.
-            elif not auth_host:
-                raise ValueError(f"'auth' missing the 'host' key.")
-                req_data=dumps(payload).encode('utf-8')
         req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
