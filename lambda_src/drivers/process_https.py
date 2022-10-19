@@ -93,7 +93,8 @@ def process_row(
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
             req_data=req_auth['body']
-
+            req_data=req_data.encode('utf-8')
+        
     # query, nextpage_path, results_path
     req_params: str = params
     req_results_path: str = results_path
