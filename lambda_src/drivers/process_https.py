@@ -58,7 +58,7 @@ def process_row(
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
-    auth_body = {}
+    auth_body = ''
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
@@ -105,7 +105,7 @@ def process_row(
         req_headers['Content-Type'] = 'application/json'
     if json:
         req_data= (
-            json if json.startswith('{') else dumps(parse_header_dict(json.update(auth_body)))
+            json if json.startswith('{') else dumps(parse_header_dict(json+=auth_body))
         ).encode()
     elif auth_body:
         req_data = auth_body.encode('utf-8')        
