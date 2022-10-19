@@ -105,7 +105,7 @@ def process_row(
         req_headers['Content-Type'] = 'application/json'
     if json:
         req_data= (
-            json if json.startswith('{') else dumps(parse_header_dict(json+=auth_body))
+            json if json.startswith('{') else dumps(parse_header_dict(json.join(auth_body)))
         ).encode()
     elif auth_body:
         req_data = auth_body.encode('utf-8')        
