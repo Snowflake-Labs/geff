@@ -55,6 +55,7 @@ def process_row(
             else {}
         ).items()
     }
+    req_data: Optional[bytes]=None
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
