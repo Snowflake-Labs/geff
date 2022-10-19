@@ -93,8 +93,8 @@ def process_row(
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
-            req_data=req_auth['body']
-            req_data=req_data.encode('utf-8')
+            pre_data=req_auth['body']
+            req_data1=pre_data.encode('utf-8')
         
     # query, nextpage_path, results_path
     req_params: str = params
@@ -103,7 +103,7 @@ def process_row(
     req_method: str = method.upper()
 
     if json:
-        req_data: Optional[bytes] = (
+        req_data= (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
         req_headers['Content-Type'] = 'application/json'
