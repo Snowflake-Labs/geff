@@ -28,7 +28,6 @@ def process_row(
     method: Text = 'get',
     headers: Text = '',
     kwargs: Union[Dict, Text] = '',
-    #auth to auth header
     auth: Text = None,
     params: Text = '',
     verbose: bool = False,
@@ -59,6 +58,7 @@ def process_row(
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
+    auth_body = {}
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
@@ -93,23 +93,25 @@ def process_row(
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
-            pre_data = req_auth['body']
-            req_data = pre_data.encode('utf-8')
+            auth_body = req_auth['body']
         
     # query, nextpage_path, results_path
     req_params: str = params
     req_results_path: str = results_path
     req_cursor: str = cursor
     req_method: str = method.upper()
-
+        
+    if auth_body or json:
+        req_headers['Content-Type'] = 'application/json'
     if json:
         req_data= (
-            json if json.startswith('{') else dumps(parse_header_dict(json))
+            json if json.startswith('{') else dumps(parse_header_dict(json.update(auth_body)))
         ).encode()
-        req_headers['Content-Type'] = 'application/json'
+    elif auth_body:
+        req_data = auth_body.encode('utf-8')        
     else:
         req_data = None if data is None else data.encode()
-
+    
     if req_params:
         req_url += f'?{req_params}'
 
