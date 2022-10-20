@@ -58,7 +58,7 @@ def process_row(
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
-    auth_body: str = None
+    auth_body: Optional[str] = None
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
