@@ -93,7 +93,16 @@ def process_row(
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
-            auth_body = req_auth['body']
+            json_body = (
+                loads(req_auth['body'])
+                if isinstance(req_auth['body'], str)
+                else req_auth['body']
+            )    
+            if json:
+                raise ValueError(f"both auth body and json present")
+            else:
+                json = json_body
+                
         
     # query, nextpage_path, results_path
     req_params: str = params
@@ -101,14 +110,10 @@ def process_row(
     req_cursor: str = cursor
     req_method: str = method.upper()
         
-    if auth_body or json:
-        req_headers['Content-Type'] = 'application/json'
     if json:
         req_data= (
-            json if json.startswith('{') else dumps(parse_header_dict(json.join(auth_body)))
-        ).encode()
-    elif auth_body:
-        req_data = auth_body.encode('utf-8')        
+            json if json.startswith('{') else dumps(parse_header_dict(json))
+        ).encode()       
     else:
         req_data = None if data is None else data.encode()
     
