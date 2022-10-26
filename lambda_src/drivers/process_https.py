@@ -54,11 +54,9 @@ def process_row(
             else {}
         ).items()
     }
-    req_data: Optional[bytes]=None
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
-    auth_body: Optional[str] = None
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
@@ -94,9 +92,9 @@ def process_row(
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
             json_body = (
-                loads(req_auth['body'])
+                req_auth['body']
                 if isinstance(req_auth['body'], str)
-                else req_auth['body']
+                else dumps(req_auth['body'])
             )    
             if json:
                 raise ValueError(f"both auth body and json present")
@@ -113,7 +111,8 @@ def process_row(
     if json:
         req_data= (
             json if json.startswith('{') else dumps(parse_header_dict(json))
-        ).encode()       
+        ).encode()
+        req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
     
