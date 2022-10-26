@@ -109,7 +109,7 @@ def process_row(
     req_method: str = method.upper()
         
     if json:
-        req_data= (
+        req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
         req_headers['Content-Type'] = 'application/json'
