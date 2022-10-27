@@ -98,9 +98,8 @@ def process_row(
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
                     else dumps(req_auth['body'])
-                )    
-                
-        
+                )
+
     # query, nextpage_path, results_path
     req_params: str = params
     req_results_path: str = results_path
