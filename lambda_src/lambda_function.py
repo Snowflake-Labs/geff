@@ -5,18 +5,12 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text
+from typing import Any, Dict, Text, Optional
 from urllib.parse import urlparse
-from time import sleep
+from timeit import default_timer
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda
-from .response_storage import (
-    initialize_dynamodb_item,
-    write_dynamodb_item,
-    check_if_initialized,
-    get_response,
-)
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -24,6 +18,8 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
+REQUEST_LOCKING_HEADER = 'sf-custom-request-locking'
+LOCKED = '-1'
 
 
 def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
@@ -102,11 +98,13 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
+    start_time = default_timer()
 
+    destination_driver = None
     batch_id = headers[BATCH_ID_HEADER]
-    batch_id_exists = check_if_initialized(batch_id)
+
     write_uri = headers.get('write-uri')
-    batch_id = headers[BATCH_ID_HEADER]
+    request_locking = headers.get(REQUEST_LOCKING_HEADER)
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
@@ -114,15 +112,42 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         destination_driver = import_module(
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
+
+    if request_locking:
+        batch_lock_backend = import_module(
+            f'geff.batch_lock_backends.{request_locking}'
+        )
+        LOG.debug(f'Storage: {request_locking}')
+        while True:
+            data = batch_lock_backend.get_data_from_lock(batch_id)
+            if data is None:  # request hasn't been initialized
+                break
+            elif data != LOCKED:  # if false, response is yet to be written
+                return data
+
+        batch_lock_backend.open_lock(batch_id)  # initilaze the request
+
+    res_data = process_request(
+        req_body, headers, event, batch_id, write_uri, destination_driver
+    )
+
+    # Write data to s3 or return data synchronously
+    if write_uri:
+        response = destination_driver.finalize(  # type: ignore
+            write_uri, batch_id, res_data
+        )
     else:
         if not batch_id_exists:
-            initialize_dynamodb_item(batch_id)  # For the first Lambda
+            initialize_dynamodb_item(batch_id) # For the first Lambda
         else:
-            while get_response(batch_id) is None:  # For the subsequent Lambda
+            while get_response(batch_id) is None: # For the subsequent Lambda
                 sleep(5)
             if get_response(batch_id):
                 return get_response(batch_id)
 
+    Returns:
+        Dict[Text, Any]: Result data returned after the request is processed.
+    """
     res_data = []
 
     for row_number, *args in req_body['data']:
@@ -172,31 +197,27 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'statusCode': 200,
             'body': b64encode(compress(data_dumps.encode())).decode(),
             'isBase64Encoded': True,
-            'headers': {'Content-Encoding': 'gzip'},
+            'headers': {'Content-Encoding': 'gzip'}
         }
         write_dynamodb_item(batch_id, response)
 
-    response_length = len(dumps(response))
-    if response_length > 6_291_556:
-        response = {
-            'statusCode': 200,
-            'body': dumps(
-                {
-                    'data': [
-                        [
-                            rn,
-                            {
-                                'error': (
-                                    f'Response size ({response_length} bytes) '
-                                    'exceeded maximum allowed payload size (6291556 bytes).'
-                                )
-                            },
-                        ]
-                        for rn, *args in req_body['data']
+    if len(response) > 6_000_000:
+        response = dumps(
+            {
+                'data': [
+                    [
+                        rn,
+                        {
+                            'error': (
+                                f'Response size ({len(response)} bytes) will likely'
+                                'exceeded maximum allowed payload size (6291556 bytes).'
+                            )
+                        },
                     ]
-                }
-            ),
-        }
+                    for rn, *args in req_body['data']
+                ]
+            }
+        )
     return response
 
 
