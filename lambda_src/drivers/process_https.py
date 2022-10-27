@@ -90,16 +90,15 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
-        elif 'body' in req_auth:
-            json_body = (
-                req_auth['body']
-                if isinstance(req_auth['body'], str)
-                else dumps(req_auth['body'])
-            )    
+        elif 'body' in req_auth:   
             if json:
                 raise ValueError(f"both auth body and json present")
             else:
-                json = json_body
+                json = (
+                    req_auth['body']
+                    if isinstance(req_auth['body'], str)
+                    else dumps(req_auth['body'])
+                )    
                 
         
     # query, nextpage_path, results_path
