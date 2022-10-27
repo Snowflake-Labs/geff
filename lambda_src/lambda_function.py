@@ -5,7 +5,8 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Optional
+from typing import Any, Dict, Text, Optional, List
+from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer
 
@@ -137,13 +138,74 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             write_uri, batch_id, res_data
         )
     else:
-        if not batch_id_exists:
-            initialize_dynamodb_item(batch_id) # For the first Lambda
-        else:
-            while get_response(batch_id) is None: # For the subsequent Lambda
-                sleep(5)
-            if get_response(batch_id):
-                return get_response(batch_id)
+        data_dumps = dumps({'data': res_data}, default=str)
+        response = {
+            'statusCode': 200,
+            'body': b64encode(compress(data_dumps.encode())).decode(),
+            'isBase64Encoded': True,
+            'headers': {'Content-Encoding': 'gzip'},
+        }
+        end_time = default_timer()
+        if request_locking and response and (end_time - start_time) > 20:
+            LOG.debug(end_time - start_time)
+            batch_lock_backend.close_lock(batch_id, response)  # write the response
+
+    if len(response) > 6_000_000:
+        response = response_size_error(response, req_body)
+    return response
+
+
+def response_size_error(
+    response_input: Dict[Text, Any], req_body: Dict[Text, Any]
+) -> str:
+    """
+    Creates a new response object with an error message,
+    for when the response size is likely to exceed the allowed payload size.
+
+    Args:
+        response (Dict[Text, Any]): Response object to calculate the size.
+        req_body (Any): Body of the request, obtained from the events object.
+
+    Returns:
+        Dict[Text, Any]: Represents the response with the error message.
+    """
+    response = dumps(
+        {
+            'data': [
+                [
+                    rn,
+                    {
+                        'error': (
+                            f'Response size ({len(response_input)} bytes) will likely'
+                            'exceeded maximum allowed payload size (6291556 bytes).'
+                        )
+                    },
+                ]
+                for rn, *args in req_body['data']
+            ]
+        }
+    )
+    return response
+
+
+def process_request(
+    req_body: Dict[Text, Any],
+    headers: Dict[Text, Any],
+    event: Any,
+    batch_id: Text,
+    write_uri: Optional[Text] = None,
+    destination_driver: Optional[ModuleType] = None,
+) -> List[List[Any]]:
+    """
+    Processes a request and returns the result data.
+
+    Args:
+        req_body (Dict[Text, Any]): Body of the request, obtained from the event object.
+        headers (Dict[Text, Any]): Headers in the request, obtained from the event object.
+        event (Any): This is the event object as received by the lambda_handler().
+        batch_id (Text): Batch ID from a request.
+        write_uri (Optional[Text]): The path where the response should be stored. Defaults to None.
+        destination_driver (Optional[Text]): The destination driver such as S3. Defaults to None.
 
     Returns:
         Dict[Text, Any]: Result data returned after the request is processed.
@@ -197,7 +259,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'statusCode': 200,
             'body': b64encode(compress(data_dumps.encode())).decode(),
             'isBase64Encoded': True,
-            'headers': {'Content-Encoding': 'gzip'}
+            'headers': {'Content-Encoding': 'gzip'},
         }
         write_dynamodb_item(batch_id, response)
 
