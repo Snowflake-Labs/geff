@@ -106,7 +106,7 @@ def process_row(
     req_results_path: str = results_path
     req_cursor: str = cursor
     req_method: str = method.upper()
-        
+ 
     if json:
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
@@ -114,7 +114,7 @@ def process_row(
         req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
-    
+
     if req_params:
         req_url += f'?{req_params}'
 
