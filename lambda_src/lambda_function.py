@@ -8,7 +8,8 @@ from json import dumps, loads
 from typing import Any, Dict, Text, Optional, List
 from types import ModuleType
 from urllib.parse import urlparse
-from timeit import default_timer
+from timeit import default_timer as timer
+from botocore.exceptions import ClientError
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda
@@ -19,7 +20,6 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
-REQUEST_LOCKING_HEADER = 'sf-custom-request-locking'
 LOCKED = '-1'
 
 
@@ -99,13 +99,12 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
-    start_time = default_timer()
+    start_time = timer()
 
     destination_driver = None
     batch_id = headers[BATCH_ID_HEADER]
 
     write_uri = headers.get('write-uri')
-    request_locking = headers.get(REQUEST_LOCKING_HEADER)
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
@@ -114,19 +113,15 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
 
-    if request_locking:
-        batch_lock_backend = import_module(
-            f'geff.batch_lock_backends.{request_locking}'
-        )
-        LOG.debug(f'Storage: {request_locking}')
-        while True:
-            data = batch_lock_backend.get_data_from_lock(batch_id)
-            if data is None:  # request hasn't been initialized
-                break
-            elif data != LOCKED:  # if false, response is yet to be written
-                return data
+    request_locking_backend = import_module('geff.request_locking_backends.dynamodb')
+    while True:
+        data = request_locking_backend.get_data_from_lock(batch_id)
+        if data is None:  # request hasn't been initialized
+            break
+        elif data != LOCKED:  # if false, the response is yet to be written
+            return data
 
-        batch_lock_backend.open_lock(batch_id)  # initilaze the request
+    request_locking_backend.open_lock(batch_id)  # initilaze the request
 
     res_data = process_request(
         req_body, headers, event, batch_id, write_uri, destination_driver
@@ -145,10 +140,16 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
-        end_time = default_timer()
-        if request_locking and response and (end_time - start_time) > 20:
+        end_time = timer()
+        if response and (end_time - start_time) > 20:
             LOG.debug(end_time - start_time)
-            batch_lock_backend.close_lock(batch_id, response)  # write the response
+            try:
+                request_locking_backend.close_lock(
+                    batch_id, response
+                )  # write the response
+            except ClientError as ce:
+                if ce.response['Error']['Code'] == 'ValidationException':
+                    pass
 
     if len(response) > 6_000_000:
         response = response_size_error(response, req_body)

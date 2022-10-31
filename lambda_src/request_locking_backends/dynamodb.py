@@ -1,12 +1,11 @@
 import os
 from typing import Dict, Text
-
 import boto3
 
-AWS_REGION = os.environ[
-    "AWS_REGION"
-]  # Placeholder while in dev TODO: change as variable/header
-DYNAMODB_TABLE = "geff-request-locking"
+AWS_REGION = os.environ.get(
+    "AWS_REGION", "us-west-2"
+)  # Placeholder while in dev TODO: change as variable/header
+DYNAMODB_TABLE = os.environ["DYNAMODB_TABLE_NAME"]
 DYNAMODB_RESOURCE = boto3.resource("dynamodb", region_name=AWS_REGION)
 table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
 TTL = 1800
@@ -16,14 +15,14 @@ def close_lock(batch_id: Text, response: Dict):
     """
     Write to the request-locking backend table, a batch id, a response and a TTL
     """
-    table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": TTL})
+    table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
 
 
 def open_lock(batch_id: Text):
     """
     Initialize an item in the requests table with a null response
     """
-    table.put_item(Item={"batch_id": batch_id, "response": "-1", "ttl": TTL})
+    table.put_item(Item={"batch_id": batch_id, "response": "-1", "ttl": 1800})
 
 
 def get_data_from_lock(batch_id: Text):
