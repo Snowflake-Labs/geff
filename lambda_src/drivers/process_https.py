@@ -45,7 +45,6 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
-    request_locking: Optional[Text] = None,
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
