@@ -5,9 +5,11 @@ import boto3
 AWS_REGION = os.environ.get(
     "AWS_REGION", "us-west-2"
 )  # Placeholder while in dev TODO: change as variable/header
-DYNAMODB_TABLE = os.environ["DYNAMODB_TABLE_NAME"]
+DYNAMODB_TABLE = os.environ.get("DYNAMODB_TABLE_NAME")
 DYNAMODB_RESOURCE = boto3.resource("dynamodb", region_name=AWS_REGION)
-table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
+if DYNAMODB_TABLE:
+    table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
+
 TTL = 1800
 
 
