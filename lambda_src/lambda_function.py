@@ -13,6 +13,7 @@ from botocore.exceptions import ClientError
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda
+from .request_locking_backends.dynamodb import open_lock, close_lock, get_data_from_lock
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -103,7 +104,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     destination_driver = None
     batch_id = headers[BATCH_ID_HEADER]
-
     write_uri = headers.get('write-uri')
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
@@ -113,15 +113,14 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
 
-    request_locking_backend = import_module('geff.request_locking_backends.dynamodb')
     while True:
-        data = request_locking_backend.get_data_from_lock(batch_id)
+        data = get_data_from_lock(batch_id)
         if data is None:  # request hasn't been initialized
             break
         elif data != LOCKED:  # if false, the response is yet to be written
             return data
 
-    request_locking_backend.open_lock(batch_id)  # initilaze the request
+    open_lock(batch_id)  # initilaze the request
 
     res_data = process_request(
         req_body, headers, event, batch_id, write_uri, destination_driver
@@ -144,9 +143,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         if response and (end_time - start_time) > 20:
             LOG.debug(end_time - start_time)
             try:
-                request_locking_backend.close_lock(
-                    batch_id, response
-                )  # write the response
+                close_lock(batch_id, response)  # write the response
             except ClientError as ce:
                 if ce.response['Error']['Code'] == 'ValidationException':
                     LOG.error(ce)
