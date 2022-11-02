@@ -149,6 +149,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 )  # write the response
             except ClientError as ce:
                 if ce.response['Error']['Code'] == 'ValidationException':
+                    LOG.error(ce)
                     pass
 
     if len(response) > 6_000_000:
