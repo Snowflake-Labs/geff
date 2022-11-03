@@ -141,7 +141,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         }
         end_time = timer()
         if response and (end_time - start_time) > 20:
-            LOG.debug(end_time - start_time)
+            LOG.debug('Storing the response in DynamoDB.')
             try:
                 close_lock(batch_id, response)  # write the response
             except ClientError as ce:
