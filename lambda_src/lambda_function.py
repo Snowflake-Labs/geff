@@ -150,11 +150,11 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                     pass
 
     if len(response) > 6_000_000:
-        response = response_size_error(response, req_body)
+        response = construct_size_error_response(response, req_body)
     return response
 
 
-def response_size_error(
+def construct_size_error_response(
     response_input: Dict[Text, Any], req_body: Dict[Text, Any]
 ) -> str:
     """
@@ -166,7 +166,7 @@ def response_size_error(
         req_body (Any): Body of the request, obtained from the events object.
 
     Returns:
-        Dict[Text, Any]: Represents the response with the error message.
+        str: Represents the response with the error message.
     """
     response = dumps(
         {
