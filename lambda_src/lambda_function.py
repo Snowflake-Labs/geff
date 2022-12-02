@@ -86,108 +86,7 @@ def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
         return {'statusCode': 202}
 
 
-def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
-    """
-    Handles the synchronous part of the generic lambda flows.
-
-    Args:
-        event (Any): This the event object as received by the lambda_handler()
-        context (Any): Has the function context. Defaults to None.
-
-    Returns:
-        Dict[Text, Any]: Represents the response status and data.
-    """
-    LOG.debug('Destination header not found in a POST and hence using sync_flow().')
-    headers = event['headers']
-    req_body = loads(event['body'])
-    start_time = timer()
-
-    destination_driver = None
-    batch_id = headers[BATCH_ID_HEADER]
-    write_uri = headers.get('write-uri')
-
-    LOG.debug(f'sync_flow() received destination: {write_uri}.')
-
-    if write_uri:
-        destination_driver = import_module(
-            f'geff.drivers.destination_{urlparse(write_uri).scheme}'
-        )
-
-    while True:
-        data = get_data_from_lock(batch_id)
-        if data is None:  # request hasn't been initialized
-            break
-        elif data != LOCKED:  # if false, the response is yet to be written
-            return data
-
-    open_lock(batch_id)  # initilaze the request
-
-    res_data = process_request(
-        req_body, headers, event, batch_id, write_uri, destination_driver
-    )
-
-    # Write data to s3 or return data synchronously
-    if write_uri:
-        response = destination_driver.finalize(  # type: ignore
-            write_uri, batch_id, res_data
-        )
-    else:
-        data_dumps = dumps({'data': res_data}, default=str)
-        response = {
-            'statusCode': 200,
-            'body': b64encode(compress(data_dumps.encode())).decode(),
-            'isBase64Encoded': True,
-            'headers': {'Content-Encoding': 'gzip'},
-        }
-        end_time = timer()
-        if response and (end_time - start_time) > 20:
-            LOG.debug('Storing the response in DynamoDB.')
-            try:
-                close_lock(batch_id, response)  # write the response
-            except ClientError as ce:
-                if ce.response['Error']['Code'] == 'ValidationException':
-                    LOG.error(ce)
-                    pass
-
-    if len(response) > 6_000_000:
-        response = construct_size_error_response(response, req_body)
-    return response
-
-
-def construct_size_error_response(
-    response_input: Dict[Text, Any], req_body: Dict[Text, Any]
-) -> str:
-    """
-    Creates a new response object with an error message,
-    for when the response size is likely to exceed the allowed payload size.
-
-    Args:
-        response (Dict[Text, Any]): Response object to calculate the size.
-        req_body (Any): Body of the request, obtained from the events object.
-
-    Returns:
-        str: Represents the response with the error message.
-    """
-    response = dumps(
-        {
-            'data': [
-                [
-                    rn,
-                    {
-                        'error': (
-                            f'Response size ({len(response_input)} bytes) will likely'
-                            'exceeded maximum allowed payload size (6291556 bytes).'
-                        )
-                    },
-                ]
-                for rn, *args in req_body['data']
-            ]
-        }
-    )
-    return response
-
-
-def process_request(
+def process_batch(
     req_body: Dict[Text, Any],
     headers: Dict[Text, Any],
     event: Any,
@@ -203,7 +102,7 @@ def process_request(
         headers (Dict[Text, Any]): Headers in the request, obtained from the event object.
         event (Any): This is the event object as received by the lambda_handler().
         batch_id (Text): Batch ID from a request.
-        write_uri (Optional[Text]): The path where the response should be stored. Defaults to None.
+        path (Optional[Text]): The path where the response should be stored. Defaults to None.
         destination_driver (Optional[Text]): The destination driver such as S3. Defaults to None.
 
     Returns:
@@ -279,6 +178,107 @@ def process_request(
                 ]
             }
         )
+    return response
+
+
+def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
+    """
+    Handles the synchronous part of the generic lambda flows.
+
+    Args:
+        event (Any): This the event object as received by the lambda_handler()
+        context (Any): Has the function context. Defaults to None.
+
+    Returns:
+        Dict[Text, Any]: Represents the response status and data.
+    """
+    LOG.debug('Destination header not found in a POST and hence using sync_flow().')
+    headers = event['headers']
+    req_body = loads(event['body'])
+    start_time = timer()
+
+    destination_driver = None
+    batch_id = headers[BATCH_ID_HEADER]
+    write_uri = headers.get('write-uri')
+
+    LOG.debug(f'sync_flow() received destination: {write_uri}.')
+
+    if write_uri:
+        destination_driver = import_module(
+            f'geff.drivers.destination_{urlparse(write_uri).scheme}'
+        )
+
+    while True:
+        data = get_data_from_lock(batch_id)
+        if data is None:  # request hasn't been initialized
+            break
+        elif data != LOCKED:  # if false, the response is yet to be written
+            return data
+
+    open_lock(batch_id)  # initilaze the request
+
+    res_data = process_batch(
+        req_body, headers, event, batch_id, write_uri, destination_driver
+    )
+
+    # Write data to s3 or return data synchronously
+    if write_uri:
+        response = destination_driver.finalize(  # type: ignore
+            write_uri, batch_id, res_data
+        )
+    else:
+        data_dumps = dumps({'data': res_data}, default=str)
+        response = {
+            'statusCode': 200,
+            'body': b64encode(compress(data_dumps.encode())).decode(),
+            'isBase64Encoded': True,
+            'headers': {'Content-Encoding': 'gzip'},
+        }
+        end_time = timer()
+        if response and (end_time - start_time) > 20:
+            LOG.debug('Storing the response in DynamoDB.')
+            try:
+                close_lock(batch_id, response)  # write the response
+            except ClientError as ce:
+                if ce.response['Error']['Code'] == 'ValidationException':
+                    LOG.error(ce)
+                    pass
+
+    if len(response) > 6_000_000:
+        response = construct_size_error_response(response, req_body)
+    return response
+
+
+def construct_size_error_response(
+    size_exceeding_response: Dict[Text, Any], req_body: Dict[Text, Any]
+) -> str:
+    """
+    Creates a new response object with an error message,
+    for when the response size is likely to exceed the allowed payload size.
+
+    Args:
+        response (Dict[Text, Any]): Response object to calculate the size.
+        req_body (Any): Body of the request, obtained from the events object.
+
+    Returns:
+        str: Represents the response with the error message.
+    """
+    response = dumps(
+        {
+            'data': [
+                [
+                    rn,
+                    {
+                        'error': (
+                            f'Response size ({len(size_exceeding_response)} bytes) will likely'
+                            'exceeded maximum allowed payload size (6291556 bytes).'
+                        )
+                    },
+                ]
+                for rn, *args in req_body['data']
+            ]
+        }
+    )
     return response
 
 
