@@ -21,6 +21,8 @@ class ResponseType(TypedDict, total=False):
 
     statusCode: int
     body: Text
+    isBase64Encoded: bool
+    headers: Dict
 
 
 def pick(path: str, d: dict):
