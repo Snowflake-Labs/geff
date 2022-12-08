@@ -92,8 +92,8 @@ def process_batch(
     headers: Dict[Text, Any],
     event: Any,
     batch_id: Text,
-    write_uri: Optional[Text] = None,
-    destination_driver: Optional[ModuleType] = None,
+    write_uri: Text,
+    destination_driver: ModuleType,
 ) -> List[List[Any]]:
     """
     Processes a request and returns the result data.
