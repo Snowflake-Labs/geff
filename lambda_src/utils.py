@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
 
-class ResponseType(TypedDict, total=False):
+class ResponseType(TypedDict):
     """
     Type constructor for responses to be returned
     """
