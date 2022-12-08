@@ -34,7 +34,7 @@ def async_flow_init(event: Any, context: Any) -> ResponseType:
         context (Any): Has the function context. Defaults to None.
 
     Returns:
-        Dict[Text, Any]: Represents the response state and data.
+        ResponseType: Represents the response state and data.
     """
     LOG.debug('Found a destination header and hence using async_flow_init().')
 
@@ -69,7 +69,7 @@ def async_flow_poll(destination: Text, batch_id: Text) -> ResponseType:
         batch_id (Text):
 
     Returns:
-        Dict[Text, Any]: This is the return value with the status code of 200 or 202
+        ResponseType: This is the return value with the status code of 200 or 202
         as per the status of the write.
     """
     LOG.debug('async_flow_poll() called as destination header was not found in a GET.')
@@ -88,28 +88,24 @@ def async_flow_poll(destination: Text, batch_id: Text) -> ResponseType:
 
 
 def process_batch(
-    req_body: Dict[Text, Any],
-    headers: Dict[Text, Any],
     event: Any,
-    batch_id: Text,
-    write_uri: Text,
-    destination_driver: ModuleType,
+    destination_driver: Optional[ModuleType],
 ) -> List[List[Any]]:
     """
     Processes a request and returns the result data.
 
     Args:
-        req_body (Dict[Text, Any]): Body of the request, obtained from the event object.
-        headers (Dict[Text, Any]): Headers in the request, obtained from the event object.
         event (Any): This is the event object as received by the lambda_handler().
-        batch_id (Text): Batch ID from a request.
-        path (Optional[Text]): The path where the response should be stored. Defaults to None.
         destination_driver (Optional[Text]): The destination driver such as S3. Defaults to None.
 
     Returns:
-        Dict[Text, Any]: Result data returned after the request is processed.
+        List[List[Any]]: Result data returned after the request is processed.
     """
     res_data = []
+    headers = event['headers']
+    req_body = loads(event['body'])
+    path = headers.get('write-uri')
+    batch_id = headers[BATCH_ID_HEADER]
 
     for row_number, *args in req_body['data']:
         row_result = []
@@ -131,10 +127,10 @@ def process_batch(
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
-            if write_uri:
+            if path:
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
-                    format(write_uri, args), batch_id, row_result, row_number
+                    path, batch_id, row_result, row_number
                 )
 
         except Exception as e:
@@ -191,7 +187,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         context (Any): Has the function context. Defaults to None.
 
     Returns:
-        Dict[Text, Any]: Represents the response status and data.
+        ResponseType: Represents the response status and data.
     """
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
@@ -218,9 +214,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
 
     open_lock(batch_id)  # initilaze the request
 
-    res_data = process_batch(
-        req_body, headers, event, batch_id, write_uri, destination_driver
-    )
+    res_data = process_batch(event, destination_driver)
 
     # Write data to s3 or return data synchronously
     if write_uri:
@@ -311,7 +305,7 @@ def lambda_handler(event: Any, context: Any) -> ResponseType:
         context (Any): Function context received from AWS
 
     Returns:
-        Dict[Text, Any]: Returns the response body.
+        ResponseType: Returns the response body.
     """
     method = event.get('httpMethod')
     headers = event['headers']
