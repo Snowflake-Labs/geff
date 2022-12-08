@@ -6,6 +6,8 @@ import sys
 from codecs import encode
 from json import dumps
 from typing import Any, Dict, Optional, Text, TypedDict
+from typing_extensions import NotRequired, Required
+
 
 import boto3
 
@@ -19,10 +21,10 @@ class ResponseType(TypedDict, total=False):
     Type constructor for responses to be returned
     """
 
-    statusCode: int
-    body: Text
-    isBase64Encoded: bool
-    headers: Dict
+    statusCode: Required[int]
+    body: Required[Text]
+    isBase64Encoded: NotRequired[bool]
+    headers: NotRequired[Dict]
 
 
 def pick(path: str, d: dict):
