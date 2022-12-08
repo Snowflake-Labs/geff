@@ -22,7 +22,7 @@ class ResponseType(TypedDict, total=False):
     """
 
     statusCode: Required[int]
-    body: Required[Text]
+    body: NotRequired[Text]
     isBase64Encoded: NotRequired[bool]
     headers: NotRequired[Dict]
 
