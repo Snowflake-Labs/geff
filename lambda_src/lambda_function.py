@@ -10,9 +10,10 @@ from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
 from botocore.exceptions import ClientError
+from hashlib import md5
 
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda
+from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
 from .request_locking_backends.dynamodb import open_lock, close_lock, get_data_from_lock
 
 # pip install --target ./site-packages -r requirements.txt
@@ -24,7 +25,7 @@ DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
 LOCKED = '-1'
 
 
-def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
+def async_flow_init(event: Any, context: Any) -> ResponseType:
     """
     Handles the async part of the request flows.
 
@@ -59,7 +60,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
         return {'statusCode': 202}
 
 
-def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
+def async_flow_poll(destination: Text, batch_id: Text) -> ResponseType:
     """Repeatedly checks on the status of the batch, and returns
     the result after the processing has been completed.
 
@@ -181,7 +182,7 @@ def process_batch(
     return response
 
 
-def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
+def sync_flow(event: Any, context: Any = None) -> ResponseType:
     """
     Handles the synchronous part of the generic lambda flows.
 
@@ -242,7 +243,25 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             except ClientError as ce:
                 if ce.response['Error']['Code'] == 'ValidationException':
                     LOG.error(ce)
-                    pass
+                    size_exceeded_response = {
+                        'statusCode': 200,
+                        'body': dumps(
+                            {
+                                'data': [
+                                    [
+                                        0,
+                                        {
+                                            'error': f'Response size ({len(response)} bytes) too large to be stored in the backend.',
+                                            'response_hash': md5(
+                                                dumps(response, sort_keys=True).encode()
+                                            ).hexdigest(),
+                                        },
+                                    ]
+                                ]
+                            }
+                        ),
+                    }
+                    close_lock(batch_id, size_exceeded_response)
 
     if len(response) > 6_000_000:
         response = construct_size_error_response(response, req_body)
@@ -250,7 +269,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
 
 def construct_size_error_response(
-    size_exceeding_response: Dict[Text, Any], req_body: Dict[Text, Any]
+    size_exceeded_response: Dict[Text, Any], req_body: Dict[Text, Any]
 ) -> str:
     """
     Creates a new response object with an error message,
@@ -270,7 +289,7 @@ def construct_size_error_response(
                     rn,
                     {
                         'error': (
-                            f'Response size ({len(size_exceeding_response)} bytes) will likely'
+                            f'Response size ({len(size_exceeded_response)} bytes) will likely'
                             'exceeded maximum allowed payload size (6291556 bytes).'
                         )
                     },
@@ -282,7 +301,7 @@ def construct_size_error_response(
     return response
 
 
-def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
+def lambda_handler(event: Any, context: Any) -> ResponseType:
     """
     Implements the asynchronous function on AWS as described in the Snowflake docs here:
     https://docs.snowflake.com/en/sql-reference/external-functions-creating-aws.html
