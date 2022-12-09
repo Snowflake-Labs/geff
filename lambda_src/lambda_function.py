@@ -263,40 +263,39 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
 
 
 def construct_size_error_response(
-    size_exceeded_response: Dict[Text, Any], req_body: Dict[Text, Any]
+    size_exceeded_response: ResponseType, req_body: Dict[Text, Any]
 ) -> ResponseType:
     """
     Creates a new response object with an error message,
     for when the response size is likely to exceed the allowed payload size.
 
     Args:
-        size_exceeded_response (Dict[Text, Any]): Response object to calculate the size.
-        req_body (Any): Body of the request, obtained from the events object.
+        size_exceeded_response (ResponseType): Response object to calculate the size.
+        req_body (Dict[Text, Any]): Body of the request, obtained from the events object.
 
     Returns:
         ResponseType: Represents the response with the error message.
     """
-    response = {
-        'statusCode': 202,
-        'body': dumps(
-            {
-                'data': [
-                    [
-                        rn,
-                        {
-                            'error': (
-                                f'Response size ({len(size_exceeded_response)} bytes) will likely'
-                                'exceeded maximum allowed payload size (6291556 bytes).'
-                            )
-                        },
-                    ]
-                    for rn, *args in req_body['data']
+    data_dumps = dumps(
+        {
+            'data': [
+                [
+                    rn,
+                    {
+                        'error': (
+                            f'Response size ({len(size_exceeded_response)} bytes) will likely'
+                            'exceeded maximum allowed payload size (6291556 bytes).'
+                        )
+                    },
                 ]
-            }
-        ),
+                for rn, *args in req_body['data']
+            ]
+        }
+    )
+    return {
+        'statusCode': 202,
+        'body': data_dumps,
     }
-
-    return response
 
 
 def lambda_handler(event: Any, context: Any) -> ResponseType:
