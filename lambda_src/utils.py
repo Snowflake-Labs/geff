@@ -6,7 +6,6 @@ import sys
 from codecs import encode
 from json import dumps
 from typing import Any, Dict, Optional, Text, TypedDict
-from typing_extensions import NotRequired, Required
 
 
 import boto3
@@ -16,15 +15,17 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
 
-class ResponseType(TypedDict):
+class ResponseType(TypedDict, total=False):
     """
     Type constructor for responses to be returned
     """
 
-    statusCode: Required[int]
-    body: NotRequired[Text]
-    isBase64Encoded: NotRequired[bool]
-    headers: NotRequired[Dict]
+    statusCode: int
+    body: Text
+    isBase64Encoded: bool
+    headers: Dict[Text, Any]
+    response: Dict[Text, Any]
+    uri: str
 
 
 def pick(path: str, d: dict):

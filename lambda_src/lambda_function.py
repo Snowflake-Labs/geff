@@ -238,7 +238,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                 if ce.response['Error']['Code'] == 'ValidationException':
                     LOG.error(ce)
                     size_exceeded_response = {
-                        'statusCode': 200,
+                        'statusCode': 202,
                         'body': dumps(
                             {
                                 'data': [
@@ -264,34 +264,38 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
 
 def construct_size_error_response(
     size_exceeded_response: Dict[Text, Any], req_body: Dict[Text, Any]
-) -> str:
+) -> ResponseType:
     """
     Creates a new response object with an error message,
     for when the response size is likely to exceed the allowed payload size.
 
     Args:
-        response (Dict[Text, Any]): Response object to calculate the size.
+        size_exceeded_response (Dict[Text, Any]): Response object to calculate the size.
         req_body (Any): Body of the request, obtained from the events object.
 
     Returns:
-        str: Represents the response with the error message.
+        ResponseType: Represents the response with the error message.
     """
-    response = dumps(
-        {
-            'data': [
-                [
-                    rn,
-                    {
-                        'error': (
-                            f'Response size ({len(size_exceeded_response)} bytes) will likely'
-                            'exceeded maximum allowed payload size (6291556 bytes).'
-                        )
-                    },
+    response = {
+        'statusCode': 202,
+        'body': dumps(
+            {
+                'data': [
+                    [
+                        rn,
+                        {
+                            'error': (
+                                f'Response size ({len(size_exceeded_response)} bytes) will likely'
+                                'exceeded maximum allowed payload size (6291556 bytes).'
+                            )
+                        },
+                    ]
+                    for rn, *args in req_body['data']
                 ]
-                for rn, *args in req_body['data']
-            ]
-        }
-    )
+            }
+        ),
+    }
+
     return response
 
 
