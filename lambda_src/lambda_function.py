@@ -159,22 +159,25 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         }
 
     if len(dumps(response)) > 6_000_000:
-        response = dumps(
-            {
-                'data': [
-                    [
-                        rn,
-                        {
-                            'error': (
-                                f'Response size ({len(dumps(response))} bytes) will likely'
-                                'exceeded maximum allowed payload size (6291556 bytes).'
-                            )
-                        },
+        response = {
+            'statusCode': 202,
+            'body': dumps(
+                {
+                    'data': [
+                        [
+                            rn,
+                            {
+                                'error': (
+                                    f'Response size ({len(dumps(response))} bytes) will likely '
+                                    'exceeded maximum allowed payload size (6291556 bytes).'
+                                )
+                            },
+                        ]
+                        for rn, *args in req_body['data']
                     ]
-                    for rn, *args in req_body['data']
-                ]
-            }
-        )
+                }
+            ),
+        }
     return response
 
 
