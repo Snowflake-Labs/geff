@@ -11,23 +11,24 @@ if DYNAMODB_TABLE:
     table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
 
 TTL = 1800
+LOCKED = '-1'
 
 
-def close_lock(batch_id: Text, response: Dict):
+def finish_batch_processing(batch_id: Text, response: Dict):
     """
-    Write to the request-locking backend table, a batch id, a response and a TTL
+    Write to the batch-locking table, a batch id, response and TTL
     """
     table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
 
 
-def open_lock(batch_id: Text):
+def initialize_batch(batch_id: Text):
     """
-    Initialize an item in the requests table with a null response
+    Initialize an item in the batch-locking table with a null response
     """
     table.put_item(Item={"batch_id": batch_id, "response": "-1", "ttl": 1800})
 
 
-def get_data_from_lock(batch_id: Text):
+def get_response_for_batch(batch_id: Text):
     """
     Retreive response for a batch id
     """
@@ -37,3 +38,17 @@ def get_data_from_lock(batch_id: Text):
     except KeyError:
         return None
     return response
+
+
+def is_batch_processing(batch_id: Text):
+    """
+    Check if a batch id is being processed already, i.e is locked.
+    """
+    return get_response_for_batch(batch_id) == LOCKED
+
+
+def is_batch_initialized(batch_id: Text):
+    """
+    Check if a batch id has been initialized in the batch-locking table.
+    """
+    return get_response_for_batch(batch_id) is None

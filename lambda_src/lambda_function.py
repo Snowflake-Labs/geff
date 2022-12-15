@@ -9,12 +9,19 @@ from typing import Any, Dict, Text, Optional, List
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
-from botocore.exceptions import ClientError
 from hashlib import md5
 
+from botocore.exceptions import ClientError
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
-from .request_locking_backends.dynamodb import open_lock, close_lock, get_data_from_lock
+from .batch_locking_backends.dynamodb import (
+    initialize_batch,
+    is_batch_initialized,
+    is_batch_processing,
+    get_response_for_batch,
+    finish_batch_processing,
+)
+
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +29,6 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
-LOCKED = '-1'
 
 
 def async_flow_init(event: Any, context: Any) -> ResponseType:
@@ -104,7 +110,7 @@ def process_batch(
     res_data = []
     headers = event['headers']
     req_body = loads(event['body'])
-    path = headers.get('write-uri')
+    write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
 
     for row_number, *args in req_body['data']:
@@ -127,10 +133,10 @@ def process_batch(
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
-            if path:
+            if write_uri:
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
-                    path, batch_id, row_result, row_number
+                    write_uri, batch_id, row_result, row_number
                 )
 
         except Exception as e:
@@ -197,27 +203,27 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
     destination_driver = None
     batch_id = headers[BATCH_ID_HEADER]
     write_uri = headers.get('write-uri')
+    destination_driver = (
+        import_module(f'geff.drivers.destination_{urlparse(write_uri).scheme}')
+        if write_uri
+        else None
+    )
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
-    if write_uri:
-        destination_driver = import_module(
-            f'geff.drivers.destination_{urlparse(write_uri).scheme}'
-        )
-
-    while True:
-        data = get_data_from_lock(batch_id)
-        if data is None:  # request hasn't been initialized
-            break
-        elif data != LOCKED:  # if false, the response is yet to be written
-            return data
-
-    open_lock(batch_id)  # initilaze the request
+    if not destination_driver:
+        if not is_batch_initialized(batch_id):
+            initialize_batch(batch_id)
+        else:
+            while is_batch_processing(batch_id):
+                if (timer() - start_time) > 30:
+                    return create_response(202, 'API Gateway timed out.')
+            return get_response_for_batch(batch_id)
 
     res_data = process_batch(event, destination_driver)
 
     # Write data to s3 or return data synchronously
-    if write_uri:
+    if destination_driver:
         response = destination_driver.finalize(  # type: ignore
             write_uri, batch_id, res_data
         )
@@ -231,31 +237,32 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         }
         end_time = timer()
         if response and (end_time - start_time) > 20:
-            LOG.debug('Storing the response in DynamoDB.')
+            LOG.debug('Storing the response in lock cache.')
             try:
-                close_lock(batch_id, response)  # write the response
+                finish_batch_processing(batch_id, response)  # write the response
             except ClientError as ce:
                 if ce.response['Error']['Code'] == 'ValidationException':
                     LOG.error(ce)
+                    error_dumps = dumps(
+                        {
+                            'data': [
+                                [
+                                    0,
+                                    {
+                                        'error': f'Response size ({len(dumps(response))} bytes) too large to be stored in the backend.',
+                                        'response_hash': md5(
+                                            dumps(response, sort_keys=True).encode()
+                                        ).hexdigest(),
+                                    },
+                                ]
+                            ]
+                        }
+                    )
                     size_exceeded_response = {
                         'statusCode': 202,
-                        'body': dumps(
-                            {
-                                'data': [
-                                    [
-                                        0,
-                                        {
-                                            'error': f'Response size ({len(response)} bytes) too large to be stored in the backend.',
-                                            'response_hash': md5(
-                                                dumps(response, sort_keys=True).encode()
-                                            ).hexdigest(),
-                                        },
-                                    ]
-                                ]
-                            }
-                        ),
+                        'body': error_dumps,
                     }
-                    close_lock(batch_id, size_exceeded_response)
+                    finish_batch_processing(batch_id, size_exceeded_response)
 
     if len(response) > 6_000_000:
         response = construct_size_error_response(response, req_body)
@@ -276,14 +283,14 @@ def construct_size_error_response(
     Returns:
         ResponseType: Represents the response with the error message.
     """
-    data_dumps = dumps(
+    error_dumps = dumps(
         {
             'data': [
                 [
                     rn,
                     {
                         'error': (
-                            f'Response size ({len(size_exceeded_response)} bytes) will likely'
+                            f'Response size ({len(size_exceeded_response)} bytes) will likely '
                             'exceeded maximum allowed payload size (6291556 bytes).'
                         )
                     },
@@ -294,7 +301,7 @@ def construct_size_error_response(
     )
     return {
         'statusCode': 202,
-        'body': data_dumps,
+        'body': error_dumps,
     }
 
 
