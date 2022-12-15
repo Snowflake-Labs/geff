@@ -4,9 +4,33 @@
 
 The Generic External Function Framework (GEFF) is a generic backend for [Snowflake External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction.html) which allows Snowflake users to perform generic invocations of Call Drivers (e.g. HTTP, SMTP, XML-RPC) and either return results to Snowflake or store them using Destination Drivers (e.g. to S3), empowering users to create new pipelines in Snowflake's Data Cloud using a standardized RBAC and interactions with Cloud Infrastructure for management of authentication credentials and other secrets.
 
-## Instructions
+## Example
 
-### Building and uploading image to ECR
+After deploying GEFF behind an [API Integration](https://docs.snowflake.com/en/sql-reference/sql/create-api-integration.html), you can create external functions that specify a protocol and an authenticated endpoint, e.g. —
+
+~~~sql
+CREATE OR REPLACE EXTERNAL FUNCTION abuseipdb_check_ip(ip STRING, max_age_in_days NUMBER, verbose BOOL)
+  RETURNS VARIANT
+  RETURNS NULL ON NULL INPUT
+  VOLATILE
+  COMMENT='https://docs.abuseipdb.com/#check-endpoint'
+  API_INTEGRATION=SECENG_API_INTEGRATION
+  HEADERS=(
+    'auth'='arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/seceng/abuseip-api-pmsbfa'
+    'params'='ipAddress={0}&maxAgeInDays={1}&{2}'
+    'url'='https://api.abuseipdb.com/api/v2/check'
+  )
+  AS 'https://r2vuxhftrg.execute-api.us-west-2.amazonaws.com/prod/https'
+;
+
+SELECT abuseipdb_check_ip('127.0.0.1', 365, TRUE);
+~~~
+
+The GEFF Lambda will retrieve the secret referenced in `auth`, e.g. `{"host": "api.abuseipdb.com", "headers": {"Key": "fbgzxukuci..."}}` and use that to authenticate the API call while maintaining a variety of security, observability, and auditability committments.
+
+## Dev Instructions
+
+### Building and uploading GEFF Lambda image to ECR
 
 ```bash
 # Clone repo
@@ -16,7 +40,7 @@ git clone git@github.com:Snowflake-Labs/geff.git
 ./ecr.sh 123556660 us-west-2 0.0.x-dev
 ```
 
-### Deploying with Terraform
+### Deploying rest of Snowflake and AWS infra with Terraform
 
 Below is an example as used in [`terraform-snowflake-aws-geff`](https://github.com/Snowflake-Labs/terraform-snowflake-aws-geff):
 
