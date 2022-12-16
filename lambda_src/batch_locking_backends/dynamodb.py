@@ -51,4 +51,4 @@ def is_batch_initialized(batch_id: Text):
     """
     Check if a batch id has been initialized in the batch-locking table.
     """
-    return get_response_for_batch(batch_id) is None
+    return get_response_for_batch(batch_id) is not None
