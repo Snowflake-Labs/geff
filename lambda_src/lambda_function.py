@@ -113,13 +113,15 @@ def process_batch(
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
 
+    processed_headers = {
+        k.replace('sf-custom-', '').replace('-', '_'): v
+        for k, v in headers.items()
+        if k.startswith('sf-custom-')
+    }
+
     for row_number, *args in req_body['data']:
         row_result = []
-        process_row_params = {
-            k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
-            for k, v in headers.items()
-            if k.startswith('sf-custom-')
-        }
+        process_row_params = {k: format(v, args) for k, v in processed_headers.items()}
 
         try:
             driver, *path = event['path'].lstrip('/').split('/')
