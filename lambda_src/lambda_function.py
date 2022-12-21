@@ -249,7 +249,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                         {
                             'data': [
                                 [
-                                    0,
+                                    rn,
                                     {
                                         'error': f'Response size ({len(dumps(response))} bytes) too large to be stored in the backend.',
                                         'response_hash': md5(
@@ -257,6 +257,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                                         ).hexdigest(),
                                     },
                                 ]
+                                for rn in req_body['data']
                             ]
                         }
                     )
@@ -297,7 +298,7 @@ def construct_size_error_response(
                         )
                     },
                 ]
-                for rn, *args in req_body['data']
+                for rn in req_body['data']
             ]
         }
     )
