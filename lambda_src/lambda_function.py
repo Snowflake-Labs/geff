@@ -257,7 +257,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                                         ).hexdigest(),
                                     },
                                 ]
-                                for rn in req_body['data']
+                                for rn, *args in req_body['data']
                             ]
                         }
                     )
@@ -298,7 +298,7 @@ def construct_size_error_response(
                         )
                     },
                 ]
-                for rn in req_body['data']
+                for rn, *args in req_body['data']
             ]
         }
     )
