@@ -160,7 +160,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     if len(dumps(response)) > 6_000_000:
         response = {
-            'statusCode': 202,
+            'statusCode': 200,
             'body': dumps(
                 {
                     'data': [
