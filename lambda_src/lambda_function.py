@@ -219,7 +219,23 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         else:
             while is_batch_processing(batch_id):
                 if (timer() - start_time) > 30:
-                    return create_response(202, 'API Gateway timed out.')
+                    error_dumps = dumps(
+                        {
+                            'data': [
+                                [
+                                    rn,
+                                    {'error': 'API gateway timed out.'},
+                                ]
+                                for rn, *args in req_body['data']
+                            ]
+                        }
+                    )
+                    gateway_timeout_response = {
+                        'statusCode': 200,
+                        'body': error_dumps,
+                    }
+                    return gateway_timeout_response
+
             return get_response_for_batch(batch_id)
 
     res_data = process_batch(event, destination_driver)
@@ -303,7 +319,7 @@ def construct_size_error_response(
         }
     )
     return {
-        'statusCode': 202,
+        'statusCode': 200,
         'body': error_dumps,
     }
 
