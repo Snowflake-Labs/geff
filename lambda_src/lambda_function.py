@@ -234,7 +234,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                         'statusCode': 200,
                         'body': error_dumps,
                     }
-                    return gateway_timeout_response
+                    finish_batch_processing(batch_id, gateway_timeout_response)
 
             return get_response_for_batch(batch_id)
 
@@ -278,7 +278,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
                         }
                     )
                     size_exceeded_response = {
-                        'statusCode': 202,
+                        'statusCode': 200,
                         'body': error_dumps,
                     }
                     finish_batch_processing(batch_id, size_exceeded_response)
