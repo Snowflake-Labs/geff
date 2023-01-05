@@ -219,22 +219,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         else:
             while is_batch_processing(batch_id):
                 if (timer() - start_time) > 30:
-                    error_dumps = dumps(
-                        {
-                            'data': [
-                                [
-                                    rn,
-                                    {'error': 'API gateway timed out.'},
-                                ]
-                                for rn, *args in req_body['data']
-                            ]
-                        }
-                    )
-                    gateway_timeout_response = {
-                        'statusCode': 200,
-                        'body': error_dumps,
-                    }
-                    finish_batch_processing(batch_id, gateway_timeout_response)
+                    return
 
             return get_response_for_batch(batch_id)
 
