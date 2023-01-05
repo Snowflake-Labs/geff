@@ -9,7 +9,6 @@ from typing import Any, Dict, Text, Optional, List
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
-from hashlib import md5
 
 from botocore.exceptions import ClientError
 from .log import format_trace
@@ -186,7 +185,7 @@ def process_batch(
     return response
 
 
-def sync_flow(event: Any, context: Any = None) -> ResponseType:
+def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
     """
     Handles the synchronous part of the generic lambda flows.
 
@@ -219,7 +218,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         else:
             while is_batch_processing(batch_id):
                 if (timer() - start_time) > 30:
-                    return
+                    return None
 
             return get_response_for_batch(batch_id)
 
@@ -241,32 +240,7 @@ def sync_flow(event: Any, context: Any = None) -> ResponseType:
         end_time = timer()
         if response and (end_time - start_time) > 20:
             LOG.debug('Storing the response in lock cache.')
-            try:
-                finish_batch_processing(batch_id, response)  # write the response
-            except ClientError as ce:
-                if ce.response['Error']['Code'] == 'ValidationException':
-                    LOG.error(ce)
-                    error_dumps = dumps(
-                        {
-                            'data': [
-                                [
-                                    rn,
-                                    {
-                                        'error': f'Response size ({len(dumps(response))} bytes) too large to be stored in the backend.',
-                                        'response_hash': md5(
-                                            dumps(response, sort_keys=True).encode()
-                                        ).hexdigest(),
-                                    },
-                                ]
-                                for rn, *args in req_body['data']
-                            ]
-                        }
-                    )
-                    size_exceeded_response = {
-                        'statusCode': 200,
-                        'body': error_dumps,
-                    }
-                    finish_batch_processing(batch_id, size_exceeded_response)
+            finish_batch_processing(batch_id, response)  # write the response
 
     if len(response) > 6_000_000:
         response = construct_size_error_response(response, req_body)
@@ -309,7 +283,7 @@ def construct_size_error_response(
     }
 
 
-def lambda_handler(event: Any, context: Any) -> ResponseType:
+def lambda_handler(event: Any, context: Any) -> Optional[ResponseType]:
     """
     Implements the asynchronous function on AWS as described in the Snowflake docs here:
     https://docs.snowflake.com/en/sql-reference/external-functions-creating-aws.html

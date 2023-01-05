@@ -1,6 +1,11 @@
 import os
 from typing import Dict, Text
 import boto3
+from json import dumps
+from hashlib import md5
+
+from botocore.exceptions import ClientError
+from ..utils import LOG
 
 AWS_REGION = os.environ.get(
     "AWS_REGION", "us-west-2"
@@ -14,11 +19,43 @@ TTL = 1800
 LOCKED = '-1'
 
 
-def finish_batch_processing(batch_id: Text, response: Dict):
+def finish_batch_processing(batch_id: Text, response: Dict, req_body: Dict = None):
     """
     Write to the batch-locking table, a batch id, response and TTL
     """
-    table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
+
+    try:
+        table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
+    except ClientError as ce:
+        if ce.response['Error']['Code'] == 'ValidationException' and req_body:
+            LOG.error(ce)
+            error_dumps = dumps(
+                {
+                    'data': [
+                        [
+                            rn,
+                            {
+                                'error': f'Response size ({len(dumps(response))} bytes) too large to be stored in the backend.',
+                                'response_hash': md5(
+                                    dumps(response, sort_keys=True).encode()
+                                ).hexdigest(),
+                            },
+                        ]
+                        for rn, *args in req_body['data']
+                    ]
+                }
+            )
+            size_exceeded_response = {
+                'statusCode': 200,
+                'body': error_dumps,
+            }
+            table.put_item(
+                Item={
+                    "batch_id": batch_id,
+                    "response": size_exceeded_response,
+                    "ttl": 1800,
+                }
+            )
 
 
 def initialize_batch(batch_id: Text):
