@@ -35,7 +35,7 @@ def finish_batch_processing(batch_id: Text, response: Dict, req_body: Dict = Non
                         [
                             rn,
                             {
-                                'error': f'Response size ({len(dumps(response))} bytes) too large to be stored in the backend.',
+                                'error': f'Response size for batch ID {batch_id} is too large to be stored in the backend: {len(req_body["data"])} row(s) and {len(dumps(response))} bytes (gzipped). Decreasing MAX_BATCH_ROWS might help.',
                                 'response_hash': md5(
                                     dumps(response, sort_keys=True).encode()
                                 ).hexdigest(),

@@ -240,7 +240,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         end_time = timer()
         if response and (end_time - start_time) > 20:
             LOG.debug('Storing the response in lock cache.')
-            finish_batch_processing(batch_id, response)  # write the response
+            finish_batch_processing(batch_id, response, req_body)  # write the response
 
     if len(response) > 6_000_000:
         response = construct_size_error_response(response, req_body)
