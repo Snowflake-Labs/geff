@@ -157,8 +157,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
-    response_length = len(dumps(response))
 
+    response_length = len(dumps(response))
     if response_length > 6_291_556:
         response = {
             'statusCode': 200,
