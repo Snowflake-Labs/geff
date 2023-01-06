@@ -21,6 +21,9 @@ from .batch_locking_backends.dynamodb import (
     finish_batch_processing,
 )
 
+RESPONSE_SIZE_IMIT = 6_000_000
+RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE = 20
+RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT = 30
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -217,7 +220,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             initialize_batch(batch_id)
         else:
             while is_batch_processing(batch_id):
-                if (timer() - start_time) > 30:
+                if (timer() - start_time) > RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT:
                     return None
 
             return get_response_for_batch(batch_id)
@@ -238,11 +241,14 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         end_time = timer()
-        if response and (end_time - start_time) > 20:
+        if (
+            response
+            and (end_time - start_time) > RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE
+        ):
             LOG.debug('Storing the response in lock cache.')
             finish_batch_processing(batch_id, response, req_body)  # write the response
 
-    if len(response) > 6_000_000:
+    if len(response) > RESPONSE_SIZE_IMIT:
         response = construct_size_error_response(response, req_body)
     return response
 
