@@ -21,7 +21,7 @@ from .batch_locking_backends.dynamodb import (
     finish_batch_processing,
 )
 
-RESPONSE_SIZE_IMIT = 6_000_000
+RESPONSE_SIZE_IMIT = 6_291_556
 RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE = 20
 RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT = 30
 
@@ -104,7 +104,7 @@ def process_batch(
 
     Args:
         event (Any): This is the event object as received by the lambda_handler().
-        destination_driver (Optional[Text]): The destination driver such as S3. Defaults to None.
+        destination_driver (Optional[ModuleType]): The destination driver such as S3. Defaults to None.
 
     Returns:
         List[List[Any]]: Result data returned after the request is processed.
@@ -197,7 +197,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         context (Any): Has the function context. Defaults to None.
 
     Returns:
-        ResponseType: Represents the response status and data.
+        Optional[ResponseType]: Represents the response status and data.
     """
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
@@ -248,20 +248,21 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             LOG.debug('Storing the response in lock cache.')
             finish_batch_processing(batch_id, response, req_body)  # write the response
 
-    if len(response) > RESPONSE_SIZE_IMIT:
-        response = construct_size_error_response(response, req_body)
+    response_length = len(dumps(response))
+    if response_length > RESPONSE_SIZE_IMIT:
+        response = construct_size_error_response(response_length, req_body)
     return response
 
 
 def construct_size_error_response(
-    size_exceeded_response: ResponseType, req_body: Dict[Text, Any]
+    size_exceeded_response_length: int, req_body: Dict[Text, Any]
 ) -> ResponseType:
     """
     Creates a new response object with an error message,
     for when the response size is likely to exceed the allowed payload size.
 
     Args:
-        size_exceeded_response (ResponseType): Response object to calculate the size.
+        size_exceeded_response (int): Response object to calculate the size.
         req_body (Dict[Text, Any]): Body of the request, obtained from the events object.
 
     Returns:
@@ -274,7 +275,7 @@ def construct_size_error_response(
                     rn,
                     {
                         'error': (
-                            f'Response size ({len(size_exceeded_response)} bytes) will likely '
+                            f'Response size ({size_exceeded_response_length} bytes) '
                             'exceeded maximum allowed payload size (6291556 bytes).'
                         )
                     },
@@ -299,7 +300,7 @@ def lambda_handler(event: Any, context: Any) -> Optional[ResponseType]:
         context (Any): Function context received from AWS
 
     Returns:
-        ResponseType: Returns the response body.
+        Optional[ResponseType]: Returns the response body.
     """
     method = event.get('httpMethod')
     headers = event['headers']
