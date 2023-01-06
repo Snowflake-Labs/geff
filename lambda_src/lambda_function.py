@@ -155,26 +155,30 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'statusCode': 200,
             'body': b64encode(compress(data_dumps.encode())).decode(),
             'isBase64Encoded': True,
-            'headers': {'Content-Encoding': 'gzip'}
+            'headers': {'Content-Encoding': 'gzip'},
         }
 
-    if len(response) > 6_000_000:
-        response = dumps(
-            {
-                'data': [
-                    [
-                        rn,
-                        {
-                            'error': (
-                                f'Response size ({len(response)} bytes) will likely'
-                                'exceeded maximum allowed payload size (6291556 bytes).'
-                            )
-                        },
+    response_length = len(dumps(response))
+    if response_length > 6_291_556:
+        response = {
+            'statusCode': 200,
+            'body': dumps(
+                {
+                    'data': [
+                        [
+                            rn,
+                            {
+                                'error': (
+                                    f'Response size ({response_length} bytes) '
+                                    'exceeded maximum allowed payload size (6291556 bytes).'
+                                )
+                            },
+                        ]
+                        for rn, *args in req_body['data']
                     ]
-                    for rn, *args in req_body['data']
-                ]
-            }
-        )
+                }
+            ),
+        }
     return response
 
 
