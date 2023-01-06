@@ -1,11 +1,11 @@
 import os
-from typing import Dict, Text
+from typing import Dict, Text, List, Any
 import boto3
 from json import dumps
 from hashlib import md5
 
 from botocore.exceptions import ClientError
-from ..utils import LOG
+from ..utils import LOG, ResponseType
 
 AWS_REGION = os.environ.get(
     "AWS_REGION", "us-west-2"
@@ -19,7 +19,9 @@ TTL = 1800
 LOCKED = '-1'
 
 
-def finish_batch_processing(batch_id: Text, response: Dict, req_body: Dict = None):
+def finish_batch_processing(
+    batch_id: Text, response: ResponseType, res_data: List[List[Any]] = None
+):
     """
     Write to the batch-locking table, a batch id, response and TTL
     """
@@ -27,21 +29,21 @@ def finish_batch_processing(batch_id: Text, response: Dict, req_body: Dict = Non
     try:
         table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
     except ClientError as ce:
-        if ce.response['Error']['Code'] == 'ValidationException' and req_body:
+        if ce.response['Error']['Code'] == 'ValidationException' and res_data:
             LOG.error(ce)
             error_dumps = dumps(
                 {
                     'data': [
                         [
-                            rn,
+                            row_num,
                             {
-                                'error': f'Response size for batch ID {batch_id} is too large to be stored in the backend: {len(req_body["data"])} row(s) and {len(dumps(response))} bytes (gzipped). Decreasing MAX_BATCH_ROWS might help.',
+                                'error': f"Response size for batch ID: {batch_id} is too large to be stored in the backend. {len(res_data)} row(s) and {len(dumps(response))} bytes (gzipped). This row's size: {len(dumps(row_res))} bytes. Decreasing MAX_BATCH_ROWS might help.",
                                 'response_hash': md5(
                                     dumps(response, sort_keys=True).encode()
                                 ).hexdigest(),
                             },
                         ]
-                        for rn, *args in req_body['data']
+                        for row_num, row_res in res_data
                     ]
                 }
             )

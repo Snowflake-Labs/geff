@@ -246,7 +246,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             and (end_time - start_time) > RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE
         ):
             LOG.debug('Storing the response in lock cache.')
-            finish_batch_processing(batch_id, response, req_body)  # write the response
+            finish_batch_processing(batch_id, response, res_data)  # write the response
 
     response_length = len(dumps(response))
     if response_length > RESPONSE_SIZE_IMIT:
