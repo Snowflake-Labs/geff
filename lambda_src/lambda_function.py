@@ -168,7 +168,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                             rn,
                             {
                                 'error': (
-                                    f'Response size ({len(dumps(response))} bytes) will '
+                                    f'Response size ({len(dumps(response))} bytes) '
                                     'exceeded maximum allowed payload size (6291556 bytes).'
                                 )
                             },
