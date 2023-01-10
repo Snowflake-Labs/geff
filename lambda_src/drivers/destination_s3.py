@@ -114,8 +114,8 @@ def write(
             prefixed_filename,
             encoded_datum,
         ),
-        'md5_hash': md5(encoded_datum.encode('utf-8')).hexdigest(),
-        'sha3_hash': sha3_256(encoded_datum.encode('utf-8')).hexdigest(),
+        'response_md5_hash': md5(encoded_datum.encode('utf-8')).hexdigest(),
+        'response_sha3_hash': sha3_256(encoded_datum.encode('utf-8')).hexdigest(),
         'uri': s3_uri,
     }
 
