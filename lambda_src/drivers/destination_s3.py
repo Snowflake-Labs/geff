@@ -5,6 +5,7 @@ from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Un
 from urllib.parse import urlparse
 from time import strftime
 import re
+from hashlib import md5, sha3_256
 
 import boto3
 from botocore.exceptions import ClientError
@@ -31,10 +32,7 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     """
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
-    return (
-        parsed_url.netloc,
-        strftime(parsed_url.path[1:])  # remove leading slash
-    )
+    return (parsed_url.netloc, strftime(parsed_url.path[1:]))  # remove leading slash
 
 
 def estimated_record_size(records: List[Dict[Text, Any]]) -> float:
@@ -116,6 +114,8 @@ def write(
             prefixed_filename,
             encoded_datum,
         ),
+        'md5_hash': md5(encoded_datum.encode('utf-8')).hexdigest(),
+        'sha3_hash': sha3_256(encoded_datum.encode('utf-8')).hexdigest(),
         'uri': s3_uri,
     }
 
