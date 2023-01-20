@@ -27,7 +27,6 @@ def process_row(
     json: Optional[Text] = None,
     method: Text = 'get',
     headers: Text = '',
-    kwargs: Union[Dict, Text] = '',
     auth: Text = None,
     params: Text = '',
     verbose: bool = False,
@@ -43,17 +42,13 @@ def process_row(
         raise ValueError('URL scheme must be HTTPS.')
 
     req_host = u.hostname
-    req_kwargs = parse_header_dict(kwargs)
-    req_headers = {
-        k: v.format(**req_kwargs)
-        for k, v in (
-            loads(headers)
-            if headers.startswith('{')
-            else parse_header_dict(headers)
-            if headers
-            else {}
-        ).items()
-    }
+    req_headers = (
+        loads(headers)
+        if headers.startswith('{')
+        else parse_header_dict(headers)
+        if headers
+        else {}
+    )
 
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
@@ -90,7 +85,7 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
-        elif 'body' in req_auth:   
+        elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
@@ -204,7 +199,9 @@ def process_row(
 
             next_url = (
                 cursor_value
-                if cursor_value and isinstance(cursor_value, str) and cursor_value.startswith('https://')
+                if cursor_value
+                and isinstance(cursor_value, str)
+                and cursor_value.startswith('https://')
                 else f'{req_url}&{cursor_param}={cursor_value}'
                 if cursor_value
                 else None
