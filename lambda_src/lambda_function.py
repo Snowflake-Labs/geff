@@ -21,7 +21,7 @@ from .batch_locking_backends.dynamodb import (
     finish_batch_processing,
 )
 
-RESPONSE_SIZE_IMIT = 6_291_556
+RESPONSE_SIZE_LIMIT = 6_291_556
 RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE = 20
 RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT = 30
 
@@ -249,7 +249,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             finish_batch_processing(batch_id, response, res_data)  # write the response
 
     response_length = len(dumps(response))
-    if response_length > RESPONSE_SIZE_IMIT:
+    if response_length > RESPONSE_SIZE_LIMIT:
         response = construct_size_error_response(response_length, req_body)
     return response
 
