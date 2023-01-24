@@ -17,7 +17,7 @@ def make_basic_header(auth):
 
 
 def parse_header_dict(value):
-    return {k: decrypt_if_encrypted(v) for k, v in parse_qsl(value)}
+    return {k: v for k, v in parse_qsl(value)}
 
 
 def process_row(
