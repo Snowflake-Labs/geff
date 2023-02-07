@@ -104,7 +104,6 @@ def write(
         prefixed_filename = hash_format(
             prefix, encoded_datum, sha3_256=lambda x: sha3_256(x).hexdigest()
         )
-        LOG.debug(f"hash: {sha3_256(encoded_datum).hexdigest()}")
     else:
         encoded_datum = (
             '\n'.join(json.dumps(d) for d in datum)
