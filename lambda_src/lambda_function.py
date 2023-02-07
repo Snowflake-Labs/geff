@@ -9,7 +9,13 @@ from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda
+from .utils import (
+    LOG,
+    create_response,
+    format,
+    invoke_process_lambda,
+    process_row_params_format,
+)
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -33,19 +39,22 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.debug('Found a destination header and hence using async_flow_init().')
 
     headers = event['headers']
+    req_body = loads(event['body'])
     batch_id = headers[BATCH_ID_HEADER]
     destination = headers[DESTINATION_URI_HEADER]
-    headers.pop(DESTINATION_URI_HEADER)
-    headers['write-uri'] = destination
+    headers['sf-custom-write-uri'] = destination
     lambda_name = context.function_name
     LOG.debug(f'async_flow_init() received destination: {destination}.')
 
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
-    # Ignoring style due to dynamic import
-    destination_driver.initialize(destination, batch_id)  # type: ignore
+    # Ignoring style due to dynamic imports
+    for rn, *args in req_body['data']:
+        destination = process_row_params_format(headers, args)['destination_uri']
+        destination_driver.initialize(destination, batch_id)  # type: ignore
 
+    headers.pop(DESTINATION_URI_HEADER)
     LOG.debug('Invoking child lambda.')
     lambda_response = invoke_process_lambda(event, lambda_name)
     if lambda_response['StatusCode'] != 202:
@@ -97,9 +106,9 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
-
+    write_uri = headers.get('sf-custom-write-uri')
     batch_id = headers[BATCH_ID_HEADER]
-    write_uri = headers.get('write-uri')
+
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
@@ -110,11 +119,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     for row_number, *args in req_body['data']:
         row_result = []
-        process_row_params = {
-            k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
-            for k, v in headers.items()
-            if k.startswith('sf-custom-')
-        }
+        process_row_params = process_row_params_format(headers, args)
+        write_uri = process_row_params['write_uri']
 
         try:
             driver, *path = event['path'].lstrip('/').split('/')

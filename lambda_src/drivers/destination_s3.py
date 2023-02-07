@@ -9,7 +9,7 @@ from hashlib import md5, sha3_256
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG
+from ..utils import LOG, hash_format
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
@@ -99,13 +99,20 @@ def write(
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    encoded_datum = (
-        '\n'.join(json.dumps(d) for d in datum)
-        if isinstance(datum, list)
-        else json.dumps(datum, default=str)
-    )
+    if isinstance(datum, bytes):
+        encoded_datum = datum
+        prefixed_filename = hash_format(
+            prefix, encoded_datum, sha3_256=lambda x: sha3_256(x).hexdigest()
+        )
+        LOG.debug(f"hash: {sha3_256(encoded_datum).hexdigest()}")
+    else:
+        encoded_datum = (
+            '\n'.join(json.dumps(d) for d in datum)
+            if isinstance(datum, list)
+            else json.dumps(datum, default=str)
+        )
+        prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
 
-    prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
@@ -114,8 +121,6 @@ def write(
             prefixed_filename,
             encoded_datum,
         ),
-        'response_md5_hash': md5(encoded_datum.encode('utf-8')).hexdigest(),
-        'response_sha3_hash': sha3_256(encoded_datum.encode('utf-8')).hexdigest(),
         'uri': s3_uri,
     }
 
