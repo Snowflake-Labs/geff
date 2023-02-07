@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
+from io import BytesIO
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -33,6 +34,7 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
+    write_uri: Optional[Text] = '',
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
@@ -90,7 +92,7 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
-        elif 'body' in req_auth:   
+        elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
@@ -146,7 +148,10 @@ def process_row(
                 if 'Date' in response_headers
                 else None
             )
-            response_body = loads(raw_response)
+            try:
+                response_body = loads(raw_response)
+            except UnicodeDecodeError:
+                response_body = BytesIO(raw_response).getbuffer().tobytes()
             LOG.debug('Extracted data from response.')
 
             response = (
@@ -204,7 +209,9 @@ def process_row(
 
             next_url = (
                 cursor_value
-                if cursor_value and isinstance(cursor_value, str) and cursor_value.startswith('https://')
+                if cursor_value
+                and isinstance(cursor_value, str)
+                and cursor_value.startswith('https://')
                 else f'{req_url}&{cursor_param}={cursor_value}'
                 if cursor_value
                 else None

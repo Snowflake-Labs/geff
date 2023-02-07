@@ -107,3 +107,29 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
+
+
+def hash_format(fmt_str, datum, **kwargs):
+    '''
+    Format filepath with the hashsum of a datum
+    '''
+
+    def lazy_eval(match_obj):
+        key = match_obj.group(1)
+        if key in kwargs:
+            return str(kwargs[key](datum))
+        return match_obj.group(0)
+
+    return re.sub(r'\{(\w+)\}', lazy_eval, fmt_str)
+
+
+def process_row_params_format(headers, args):
+    '''
+    Format row parameters
+    '''
+
+    return {
+        k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
+        for k, v in headers.items()
+        if k.startswith('sf-custom-')
+    }
