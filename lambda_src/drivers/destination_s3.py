@@ -5,7 +5,7 @@ from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Un
 from urllib.parse import urlparse
 from time import strftime
 import re
-from hashlib import md5, sha3_256
+from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
@@ -19,6 +19,7 @@ AWS_REGION = os.environ[
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
 MANIESTS_FOLDER_NAME = 'meta'
+HASH_PARAM = '{sha2}'
 
 
 def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
@@ -87,6 +88,11 @@ def initialize(destination: Text, batch_id: Text):
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
+    prefix_folder = (
+        re.sub(r'/{\s*sha2\s*}/$', '/', prefix, flags=re.IGNORECASE)
+        if HASH_PARAM in prefix_folder.lower()
+        else prefix_folder
+    )
 
     if prefix_folder:
         write_to_s3(bucket, prefix_folder, content)
@@ -102,7 +108,7 @@ def write(
     if isinstance(datum, bytes):
         encoded_datum = datum
         prefixed_filename = hash_format(
-            prefix, encoded_datum, sha3_256=lambda x: sha3_256(x).hexdigest()
+            prefix, encoded_datum, sha2=lambda x: sha256(x).hexdigest()
         )
     else:
         encoded_datum = (

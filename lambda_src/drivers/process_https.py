@@ -143,12 +143,13 @@ def process_row(
                 if 'Date' in response_headers
                 else None
             )
-            try:
-                response_body = loads(raw_response)
-            except UnicodeDecodeError:
-                response_body = BytesIO(raw_response).getbuffer().tobytes()
-            LOG.debug('Extracted data from response.')
 
+            if response_headers['Content-Type'] == 'application/json':
+                response_body = loads(raw_response)
+            else:
+                response_body = BytesIO(raw_response).getbuffer().tobytes()
+
+            LOG.debug('Extracted data from response.')
             response = (
                 {
                     'body': response_body,
