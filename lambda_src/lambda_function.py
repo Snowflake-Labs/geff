@@ -120,7 +120,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     for row_number, *args in req_body['data']:
         row_result = []
         process_row_params = process_row_params_format(headers, args)
-        write_uri = process_row_params['write_uri']
+        write_uri = process_row_params.get('write_uri')
 
         try:
             driver, *path = event['path'].lstrip('/').split('/')
