@@ -89,7 +89,7 @@ def initialize(destination: Text, batch_id: Text):
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
     prefix_folder = (
-        re.sub(r'/{\s*sha2\s*}/$', '/', prefix_folder, flags=re.IGNORECASE)
+        re.sub(r'/{\s*sha2\s*}.*', '/', prefix_folder, flags=re.IGNORECASE)
         if HASH_PARAM in prefix_folder.lower()
         else prefix_folder
     )
