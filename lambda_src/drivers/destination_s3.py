@@ -102,7 +102,9 @@ def write(
     bucket, prefix = parse_destination_uri(destination)
     if isinstance(datum, bytes):
         encoded_datum = datum
-        prefixed_filename = prefix
+        prefixed_filename = hash_format(
+            prefix, encoded_datum, sha2=lambda x: sha256(x).hexdigest()
+        )
     else:
         encoded_datum = (
             '\n'.join(json.dumps(d) for d in datum)
@@ -111,9 +113,6 @@ def write(
         )
         prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
 
-    prefixed_filename = hash_format(
-        prefixed_filename, encoded_datum, sha2=lambda x: sha256(x).hexdigest()
-    )
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
