@@ -109,27 +109,22 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
     return lambda_response
 
 
-def hash_format(fmt_str, datum, **kwargs):
+def lazy_format(s: str, **kwargs):
     '''
-    Format filepath with the hashsum of a datum
+    Lazily formats a string by calling the replacement values and using their result
+
+    Args:
+    s (str): String to be formatted
+    **kwargs (dict[str]() -> str): Maps replacement fields to formatting functions
+
+    Returns:
+    str: Formatted string
     '''
 
     def lazy_eval(match_obj):
         key = match_obj.group(1)
         if key in kwargs:
-            return str(kwargs[key](datum))
+            return str(kwargs[key]())
         return match_obj.group(0)
 
-    return re.sub(r'\{(\w+)\}', lazy_eval, fmt_str)
-
-
-def process_row_params_format(headers, args):
-    '''
-    Format row parameters
-    '''
-
-    return {
-        k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
-        for k, v in headers.items()
-        if k.startswith('sf-custom-')
-    }
+    return re.sub(r'\{(\w+)\}', lazy_eval, s)

@@ -14,7 +14,6 @@ from .utils import (
     create_response,
     format,
     invoke_process_lambda,
-    process_row_params_format,
 )
 
 # pip install --target ./site-packages -r requirements.txt
@@ -23,6 +22,18 @@ sys.path.append(os.path.join(dir_path, 'site-packages'))
 
 BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
+
+
+def process_row_params_format(headers, args):
+    '''
+    Format row parameters
+    '''
+
+    return {
+        k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
+        for k, v in headers.items()
+        if k.startswith('sf-custom-')
+    }
 
 
 def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:

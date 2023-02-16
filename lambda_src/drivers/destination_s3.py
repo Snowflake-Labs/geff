@@ -9,7 +9,7 @@ from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG, hash_format
+from ..utils import LOG, lazy_format
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
@@ -87,7 +87,7 @@ def initialize(destination: Text, batch_id: Text):
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
-    prefix_folder = re.sub(r'/{\s*sha2\s*}.*', '/', prefix_folder, flags=re.IGNORECASE)
+    prefix_folder = re.sub(r'/{\s*hash\s*}.*', '/', prefix_folder, flags=re.IGNORECASE)
 
     if prefix_folder:
         write_to_s3(bucket, prefix_folder, content)
@@ -102,8 +102,8 @@ def write(
     bucket, prefix = parse_destination_uri(destination)
     if isinstance(datum, bytes):
         encoded_datum = datum
-        prefixed_filename = hash_format(
-            prefix, encoded_datum, sha2=lambda x: sha256(x).hexdigest()
+        prefixed_filename = lazy_format(
+            prefix, hash=lambda: sha256(encoded_datum).hexdigest()
         )
     else:
         encoded_datum = (
@@ -115,7 +115,7 @@ def write(
 
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
-    return {
+    response = {
         'response': write_to_s3(
             bucket,
             prefixed_filename,
@@ -123,6 +123,9 @@ def write(
         ),
         'uri': s3_uri,
     }
+    if isinstance(encoded_datum, bytes):
+        response['sha256_hash'] = sha256(encoded_datum).hexdigest()
+    return response
 
 
 def finalize(
