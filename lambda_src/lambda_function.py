@@ -5,7 +5,7 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text
+from typing import Any, Dict, Text, Tuple
 from urllib.parse import urlparse
 
 from .log import format_trace
@@ -24,9 +24,18 @@ BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
 
 
-def process_row_params_format(headers, args):
+def process_row_params_format(
+    headers: Dict[Text, Text], args: Tuple[Any]
+) -> Dict[Text, Any]:
     '''
-    Format row parameters
+    Format parameters in headers with arguments from a row.
+
+    Args:
+        headers (Dict[Text, Text]): Headers obtained from the event.
+        args (Tuple[Any]): Arguments obtained from the request body.
+
+    Returns:
+        Dict[Text, Any]: Returns formatted
     '''
 
     return {

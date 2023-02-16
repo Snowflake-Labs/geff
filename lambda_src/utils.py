@@ -5,7 +5,7 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text
+from typing import Any, Dict, Optional, Text, Callable
 
 import boto3
 
@@ -109,13 +109,13 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
     return lambda_response
 
 
-def lazy_format(s: str, **kwargs):
+def lazy_format(s: str, **kwargs: Callable[[], str]) -> str:
     '''
     Lazily formats a string by calling the replacement values and using their result
 
     Args:
     s (str): String to be formatted
-    **kwargs (dict[str]() -> str): Maps replacement fields to formatting functions
+    **kwargs (Callable[[], str]): Maps replacement fields to formatting functions
 
     Returns:
     str: Formatted string
