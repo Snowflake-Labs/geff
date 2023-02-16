@@ -19,6 +19,7 @@ AWS_REGION = os.environ[
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
 MANIESTS_FOLDER_NAME = 'meta'
+HASH_PARAM = 'hash'
 
 
 def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
@@ -87,8 +88,12 @@ def initialize(destination: Text, batch_id: Text):
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
-    prefix_folder = re.sub(r'/{\s*hash\s*}.*', '/', prefix_folder, flags=re.IGNORECASE)
-
+    prefix_folder = re.sub(
+        r'/{\s*' + HASH_PARAM + r'\s*}.*',
+        '/',
+        prefix_folder,
+        flags=re.IGNORECASE,
+    )
     if prefix_folder:
         write_to_s3(bucket, prefix_folder, content)
 
