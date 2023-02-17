@@ -88,12 +88,7 @@ def initialize(destination: Text, batch_id: Text):
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
-    prefix_folder = re.sub(
-        r'/{\s*' + HASH_PARAM + r'\s*}.*',
-        '/',
-        prefix_folder,
-        flags=re.IGNORECASE,
-    )
+    prefix_folder = re.sub(r'/{[^}].*', '/', prefix_folder)
     if prefix_folder:
         write_to_s3(bucket, prefix_folder, content)
 
