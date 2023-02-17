@@ -101,9 +101,8 @@ def write(
     bucket, prefix = parse_destination_uri(destination)
     if isinstance(datum, bytes):
         encoded_datum = datum
-        prefixed_filename = lazy_format(
-            prefix, hash=lambda: sha256(encoded_datum).hexdigest()
-        )
+        encoded_datum_hash = sha256(encoded_datum).hexdigest()
+        prefixed_filename = lazy_format(prefix, hash=lambda: encoded_datum_hash)
     else:
         encoded_datum = (
             '\n'.join(json.dumps(d) for d in datum)
@@ -123,7 +122,7 @@ def write(
         'uri': s3_uri,
     }
     if isinstance(encoded_datum, bytes):
-        response['sha256_hash'] = sha256(encoded_datum).hexdigest()
+        response['sha256_hash'] = encoded_datum_hash
     return response
 
 
