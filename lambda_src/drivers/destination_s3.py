@@ -19,7 +19,6 @@ AWS_REGION = os.environ[
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
 MANIESTS_FOLDER_NAME = 'meta'
-HASH_PARAM = 'hash'
 
 
 def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
