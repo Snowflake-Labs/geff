@@ -2,7 +2,9 @@
 
 # GEFF
 
-The Generic External Function Framework (GEFF) is a generic backend for [Snowflake External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction.html) which allows Snowflake users to perform generic invocations of Call Drivers (e.g. HTTP, SMTP, XML-RPC) and either return results to Snowflake or store them using Destination Drivers (e.g. to S3), empowering users to create new pipelines in Snowflake's Data Cloud using a standardized RBAC and interactions with Cloud Infrastructure for management of authentication credentials and other secrets.
+The Generic External Function Framework (GEFF) is a generic backend for [Snowflake External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction.html) which allows Snowflake users to invoke RPC endpoints via Call Drivers (e.g. HTTP, SMTP, XML-RPC), either returning results to Snowflake, or storing them with Write Drivers (e.g. to S3).
+
+GEFF empowers users to invoke a variety of external RPC's without changing infrastructure, managing and modeling those RPC interfaces in Snowflake's Data Cloud, using Snowflake RBAC, and a single standaredized interaction with CSP's.
 
 ## Example
 
@@ -11,10 +13,9 @@ After deploying GEFF behind an [API Integration](https://docs.snowflake.com/en/s
 ~~~sql
 CREATE OR REPLACE EXTERNAL FUNCTION abuseipdb_check_ip(ip STRING, max_age_in_days NUMBER, verbose BOOL)
   RETURNS VARIANT
-  RETURNS NULL ON NULL INPUT
   VOLATILE
   COMMENT='https://docs.abuseipdb.com/#check-endpoint'
-  API_INTEGRATION=SECENG_API_INTEGRATION
+  API_INTEGRATION=SECENG
   HEADERS=(
     'auth'='arn:aws:secretsmanager:us-west-2:123456789012:secret:prod/seceng/abuseip-api-pmsbfa'
     'params'='ipAddress={0}&maxAgeInDays={1}&{2}'
@@ -26,7 +27,7 @@ CREATE OR REPLACE EXTERNAL FUNCTION abuseipdb_check_ip(ip STRING, max_age_in_day
 SELECT abuseipdb_check_ip('127.0.0.1', 365, TRUE);
 ~~~
 
-The GEFF Lambda will retrieve the secret referenced in `auth`, e.g. `{"host": "api.abuseipdb.com", "headers": {"Key": "fbgzxukuci..."}}` and use that to authenticate the API call while maintaining a variety of security, observability, and auditability committments.
+GEFF will then retrieve the secret referenced in `auth`, e.g. `{"host": "api.abuseipdb.com", "headers": {"Key": "fbgzxukuci..."}}` and use that to authenticate the API call while maintaining a variety of [security, observability, and auditability committments](https://github.com/Snowflake-Labs/geff/wiki/I.-GEFF#security-guarantees).
 
 ## Dev Instructions
 
