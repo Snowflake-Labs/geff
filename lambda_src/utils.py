@@ -107,24 +107,3 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
-
-
-def lazy_format(s: str, **kwargs: Callable[[], str]) -> str:
-    '''
-    Lazily formats a string by calling the replacement values and using their result
-
-    Args:
-    s (str): String to be formatted
-    **kwargs (Callable[[], str]): Maps replacement fields to formatting functions
-
-    Returns:
-    str: Formatted string
-    '''
-
-    def lazy_eval(match_obj):
-        key = match_obj.group(1)
-        if key in kwargs:
-            return str(kwargs[key]())
-        return match_obj.group(0)
-
-    return re.sub(r'\{(\w+)\}', lazy_eval, s)

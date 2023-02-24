@@ -9,7 +9,7 @@ from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG, lazy_format
+from ..utils import LOG
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
@@ -95,14 +95,14 @@ def initialize(destination: Text, batch_id: Text):
 def write(
     destination: Text,
     batch_id: Text,
-    datum: Union[Dict, List],
+    datum: Union[Dict, List, bytes],
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
     if isinstance(datum, bytes):
         encoded_datum = datum
         encoded_datum_hash = sha256(encoded_datum).hexdigest()
-        prefixed_filename = lazy_format(prefix, hash=lambda: encoded_datum_hash)
+        prefixed_filename = prefix.format(hash=encoded_datum_hash)
     else:
         encoded_datum = (
             '\n'.join(json.dumps(d) for d in datum)
@@ -122,7 +122,7 @@ def write(
         'uri': s3_uri,
     }
     if isinstance(encoded_datum, bytes):
-        response['sha256_hash'] = encoded_datum_hash
+        response['sha256'] = encoded_datum_hash
     return response
 
 

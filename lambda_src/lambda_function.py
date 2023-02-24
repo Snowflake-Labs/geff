@@ -24,27 +24,6 @@ BATCH_ID_HEADER = 'sf-external-function-query-batch-id'
 DESTINATION_URI_HEADER = 'sf-custom-destination-uri'
 
 
-def process_row_params_format(
-    headers: Dict[Text, Text], args: Tuple[Any]
-) -> Dict[Text, Any]:
-    '''
-    Format parameters in headers with arguments from a row.
-
-    Args:
-        headers (Dict[Text, Text]): Headers obtained from the event.
-        args (Tuple[Any]): Arguments obtained from the request body.
-
-    Returns:
-        Dict[Text, Any]: Returns formatted
-    '''
-
-    return {
-        k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
-        for k, v in headers.items()
-        if k.startswith('sf-custom-')
-    }
-
-
 def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     """
     Handles the async part of the request flows.
@@ -62,7 +41,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     req_body = loads(event['body'])
     batch_id = headers[BATCH_ID_HEADER]
     destination = headers[DESTINATION_URI_HEADER]
-    headers['sf-custom-write-uri'] = destination
+    headers['write-uri'] = destination
     lambda_name = context.function_name
     LOG.debug(f'async_flow_init() received destination: {destination}.')
 
@@ -71,8 +50,8 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     )
     # Ignoring style due to dynamic imports
     for rn, *args in req_body['data']:
-        destination = process_row_params_format(headers, args)['destination_uri']
-        destination_driver.initialize(destination, batch_id)  # type: ignore
+        parameterized_destination = format(destination, args)
+        destination_driver.initialize(parameterized_destination, batch_id)  # type: ignore
 
     headers.pop(DESTINATION_URI_HEADER)
     LOG.debug('Invoking child lambda.')
@@ -126,7 +105,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
-    write_uri = headers.get('sf-custom-write-uri')
+    write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
@@ -139,8 +118,12 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     for row_number, *args in req_body['data']:
         row_result = []
-        process_row_params = process_row_params_format(headers, args)
-        write_uri = process_row_params.get('write_uri')
+        process_row_params = {
+            k.replace('sf-custom-', '').replace('-', '_'): format(v, args)
+            for k, v in headers.items()
+            if k.startswith('sf-custom-')
+        }
+        parameterized_write_uri = format(write_uri, args)
 
         try:
             driver, *path = event['path'].lstrip('/').split('/')
@@ -154,10 +137,10 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
-            if write_uri:
+            if parameterized_write_uri:
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
-                    write_uri, batch_id, row_result, row_number
+                    parameterized_write_uri, batch_id, row_result, row_number
                 )
 
         except Exception as e:
