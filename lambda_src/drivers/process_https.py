@@ -149,6 +149,7 @@ def process_row(
                 response_body = BytesIO(raw_response).getbuffer().tobytes()
 
             LOG.debug('Extracted data from response.')
+
             response = (
                 {
                     'body': response_body,
