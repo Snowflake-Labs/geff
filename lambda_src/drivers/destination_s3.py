@@ -105,7 +105,7 @@ def write(
         prefixed_filename = prefix.format(hash=encoded_datum_hash)
     else:
         encoded_datum = (
-            '\n'.join(json.dumps(d) for d in datum)
+            '\n'.join(json.dumps(d) for d in datum)  # type: ignore
             if isinstance(datum, list)
             else json.dumps(datum, default=str)
         )

@@ -5,7 +5,7 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text, Callable
+from typing import Any, Dict, Optional, Text
 
 import boto3
 

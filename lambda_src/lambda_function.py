@@ -5,7 +5,7 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Tuple
+from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
 from .log import format_trace
@@ -38,10 +38,8 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.debug('Found a destination header and hence using async_flow_init().')
 
     headers = event['headers']
-    req_body = loads(event['body'])
     batch_id = headers[BATCH_ID_HEADER]
-    destination = headers[DESTINATION_URI_HEADER]
-    headers['write-uri'] = destination
+    destination = headers['write-uri'] = headers.pop(DESTINATION_URI_HEADER)
     lambda_name = context.function_name
     LOG.debug(f'async_flow_init() received destination: {destination}.')
 
@@ -49,11 +47,8 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
         f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
     # Ignoring style due to dynamic imports
-    for rn, *args in req_body['data']:
-        parameterized_destination = format(destination, args)
-        destination_driver.initialize(parameterized_destination, batch_id)  # type: ignore
+    destination_driver.initialize(destination, batch_id)  # type: ignore
 
-    headers.pop(DESTINATION_URI_HEADER)
     LOG.debug('Invoking child lambda.')
     lambda_response = invoke_process_lambda(event, lambda_name)
     if lambda_response['StatusCode'] != 202:

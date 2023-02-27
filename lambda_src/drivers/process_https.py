@@ -142,12 +142,11 @@ def process_row(
                 if 'Date' in response_headers
                 else None
             )
-
-            if response_headers['Content-Type'] == 'application/json':
-                response_body = loads(raw_response)
-            else:
-                response_body = BytesIO(raw_response).getbuffer().tobytes()
-
+            response_body = (
+                loads(raw_response)
+                if response_headers['Content-Type'] == 'application/json'
+                else BytesIO(raw_response).getbuffer().tobytes()
+            )
             LOG.debug('Extracted data from response.')
 
             response = (
