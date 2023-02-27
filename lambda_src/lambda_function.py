@@ -118,7 +118,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             for k, v in headers.items()
             if k.startswith('sf-custom-')
         }
-        parameterized_write_uri = format(write_uri, args)
 
         try:
             driver, *path = event['path'].lstrip('/').split('/')
@@ -132,7 +131,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
-            if parameterized_write_uri:
+            if write_uri:
+                parameterized_write_uri = format(write_uri, args)
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
                     parameterized_write_uri, batch_id, row_result, row_number
