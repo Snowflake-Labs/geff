@@ -46,7 +46,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
-    # Ignoring style due to dynamic imports
+    # Ignoring style due to dynamic import
     destination_driver.initialize(destination, batch_id)  # type: ignore
 
     LOG.debug('Invoking child lambda.')
