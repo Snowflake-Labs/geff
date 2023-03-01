@@ -1,7 +1,7 @@
 import json
 import os
 from random import sample
-from typing import Any, Dict, Generator, List, Optional, Text, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Text, Tuple, Union, AnyStr
 from urllib.parse import urlparse
 from time import strftime
 import re
@@ -73,7 +73,7 @@ def chunker(records: List[Any], chunk_size: int) -> Generator[List[Any], None, N
         yield records[pos : pos + chunk_size]
 
 
-def write_to_s3(bucket: Text, filename: Text, content: bytes) -> Dict[Text, Any]:
+def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any]:
     return S3_CLIENT.put_object(
         Bucket=bucket,
         Body=content,
@@ -99,12 +99,12 @@ def write(
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    encoded_datum = bytes(
+    encoded_datum = (
         datum
         if isinstance(datum, bytes)
-        else '\n'.join(json.dumps(d) for d in datum)
+        else ('\n'.join(json.dumps(d) for d in datum)).encode()
         if isinstance(datum, list)
-        else json.dumps(datum, default=str)
+        else json.dumps(datum, default=str).encode()
     )
     encoded_datum_hash = sha256(encoded_datum).hexdigest()
     prefixed_filename = (
