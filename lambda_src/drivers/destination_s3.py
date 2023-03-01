@@ -1,7 +1,7 @@
 import json
 import os
 from random import sample
-from typing import Any, Dict, Generator, List, Optional, Text, Tuple, Union, AnyStr
+from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
 from time import strftime
 import re
