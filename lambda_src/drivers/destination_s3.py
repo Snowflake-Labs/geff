@@ -1,7 +1,7 @@
 import json
 import os
 from random import sample
-from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Text, Tuple, Union
 from urllib.parse import urlparse
 from time import strftime
 import re
@@ -73,7 +73,7 @@ def chunker(records: List[Any], chunk_size: int) -> Generator[List[Any], None, N
         yield records[pos : pos + chunk_size]
 
 
-def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any]:
+def write_to_s3(bucket: Text, filename: Text, content: bytes) -> Dict[Text, Any]:
     return S3_CLIENT.put_object(
         Bucket=bucket,
         Body=content,
@@ -99,17 +99,23 @@ def write(
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    if isinstance(datum, bytes):
-        encoded_datum = datum
-        encoded_datum_hash = sha256(encoded_datum).hexdigest()
-        prefixed_filename = prefix.format(hash=encoded_datum_hash)
-    else:
-        encoded_datum = (
-            '\n'.join(json.dumps(d) for d in datum)  # type: ignore
-            if isinstance(datum, list)
-            else json.dumps(datum, default=str)
+    encoded_datum = bytes(
+        datum
+        if isinstance(datum, bytes)
+        else '\n'.join(json.dumps(d) for d in datum)
+        if isinstance(datum, list)
+        else json.dumps(datum, default=str)
+    )
+    encoded_datum_hash = sha256(encoded_datum).hexdigest()
+    prefixed_filename = (
+        f'{prefix}{batch_id}_row_{row_index}.data.json'
+        if prefix.endswith('/')
+        else prefix.format(
+            hash=encoded_datum_hash,
+            batch_id=batch_id,
+            row_index=row_index,
         )
-        prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
+    )
 
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 

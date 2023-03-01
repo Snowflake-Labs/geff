@@ -132,10 +132,9 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
             if write_uri:
-                parameterized_write_uri = format(write_uri, args)
                 # Write s3 data and return confirmation
-                row_result = destination_driver.write(  # type: ignore
-                    parameterized_write_uri, batch_id, row_result, row_number
+                row_result = destination_driver.write(
+                    format(write_uri, args), batch_id, row_result, row_number
                 )
 
         except Exception as e:
