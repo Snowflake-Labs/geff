@@ -119,17 +119,15 @@ def write(
 
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
-    response = {
+    return {
         'response': write_to_s3(
             bucket,
             prefixed_filename,
             encoded_datum,
         ),
         'uri': s3_uri,
+        'sha256': encoded_datum_hash,
     }
-    if isinstance(encoded_datum, bytes):
-        response['sha256'] = encoded_datum_hash
-    return response
 
 
 def finalize(
