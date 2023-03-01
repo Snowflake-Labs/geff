@@ -107,6 +107,7 @@ def write(
         else json.dumps(datum, default=str).encode()
     )
     encoded_datum_hash = sha256(encoded_datum).hexdigest()
+
     prefixed_filename = (
         f'{prefix}{batch_id}_row_{row_index}.data.json'
         if prefix.endswith('/')
