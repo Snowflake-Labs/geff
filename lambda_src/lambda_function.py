@@ -133,7 +133,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
             if write_uri:
                 # Write s3 data and return confirmation
-                row_result = destination_driver.write(
+                row_result = destination_driver.write(  # type: ignore
                     format(write_uri, args), batch_id, row_result, row_number
                 )
 
