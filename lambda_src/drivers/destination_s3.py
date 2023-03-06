@@ -5,6 +5,7 @@ from typing import Any, AnyStr, Dict, Generator, List, Optional, Text, Tuple, Un
 from urllib.parse import urlparse
 from time import strftime
 import re
+from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
@@ -31,10 +32,7 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     """
     LOG.debug(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
-    return (
-        parsed_url.netloc,
-        strftime(parsed_url.path[1:])  # remove leading slash
-    )
+    return (parsed_url.netloc, strftime(parsed_url.path[1:]))  # remove leading slash
 
 
 def estimated_record_size(records: List[Dict[Text, Any]]) -> float:
@@ -89,7 +87,7 @@ def initialize(destination: Text, batch_id: Text):
     # Regex captures characters after and including the rightmost '/' in a path,
     # which are then replaced with a '/', e.g. '/a/b/c' -> '/a/b/'
     prefix_folder = re.sub(r'/[^/]*$', '/', prefix) if '/' in prefix else ''
-
+    prefix_folder = re.sub(r'/{[^}].*', '/', prefix_folder)
     if prefix_folder:
         write_to_s3(bucket, prefix_folder, content)
 
@@ -97,17 +95,29 @@ def initialize(destination: Text, batch_id: Text):
 def write(
     destination: Text,
     batch_id: Text,
-    datum: Union[Dict, List],
+    datum: Union[Dict, List, bytes],
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
     encoded_datum = (
-        '\n'.join(json.dumps(d) for d in datum)
+        datum
+        if isinstance(datum, bytes)
+        else ('\n'.join(json.dumps(d) for d in datum)).encode()
         if isinstance(datum, list)
-        else json.dumps(datum, default=str)
+        else json.dumps(datum, default=str).encode()
+    )
+    encoded_datum_hash = sha256(encoded_datum).hexdigest()
+
+    prefixed_filename = (
+        f'{prefix}{batch_id}_row_{row_index}.data.json'
+        if prefix.endswith('/')
+        else prefix.format(
+            hash=encoded_datum_hash,
+            batch_id=batch_id,
+            row_index=row_index,
+        )
     )
 
-    prefixed_filename = f'{prefix}{batch_id}_row_{row_index}.data.json'
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     return {
@@ -117,6 +127,7 @@ def write(
             encoded_datum,
         ),
         'uri': s3_uri,
+        'sha256': encoded_datum_hash,
     }
 
 

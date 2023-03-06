@@ -9,7 +9,12 @@ from typing import Any, Dict, Text
 from urllib.parse import urlparse
 
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda
+from .utils import (
+    LOG,
+    create_response,
+    format,
+    invoke_process_lambda,
+)
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -34,9 +39,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
 
     headers = event['headers']
     batch_id = headers[BATCH_ID_HEADER]
-    destination = headers[DESTINATION_URI_HEADER]
-    headers.pop(DESTINATION_URI_HEADER)
-    headers['write-uri'] = destination
+    destination = headers['write-uri'] = headers.pop(DESTINATION_URI_HEADER)
     lambda_name = context.function_name
     LOG.debug(f'async_flow_init() received destination: {destination}.')
 
@@ -97,9 +100,9 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
-
-    batch_id = headers[BATCH_ID_HEADER]
     write_uri = headers.get('write-uri')
+    batch_id = headers[BATCH_ID_HEADER]
+
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
@@ -131,7 +134,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             if write_uri:
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
-                    write_uri, batch_id, row_result, row_number
+                    format(write_uri, args), batch_id, row_result, row_number
                 )
 
         except Exception as e:
