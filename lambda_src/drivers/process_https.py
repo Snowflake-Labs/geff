@@ -57,6 +57,7 @@ def process_row(
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
         auth = decrypt_if_encrypted(auth)
+        LOG.info('Secret accessed.')
 
         req_auth = (
             loads(auth)
@@ -79,14 +80,19 @@ def process_row(
         elif not auth_host:
             raise ValueError(f"'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
+            LOG.info('Basic authentication found in secret.')
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
+            LOG.info('Bearer token found in secret.')
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
+            LOG.info('authorization header found in secret.')
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
+            LOG.info('Authorization header found in secret.')
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
+            LOG.info('Authorization body found in secret.')
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
@@ -125,12 +131,15 @@ def process_row(
         try:
             LOG.debug(f'Making request with {req}')
             res = urlopen(req)
+            LOG.info(
+                f'Request length: {len(req.full_url) + len(req.headers) + len(req.data)}'
+            )
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
             res_body = res.read()
-            LOG.debug(f'Got the response body with length: {len(res_body)}')
+            LOG.info(f'Got the response body with length: {len(res_body)}')
 
             raw_response = (
                 decompress(res_body)
