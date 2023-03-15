@@ -102,13 +102,16 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
-
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
         destination_driver = import_module(
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
+        LOG.info('Invocation: asynchronous.')
+    else:
+        LOG.info('Invocation: synchronous.')
+
     res_data = []
 
     for row_number, *args in req_body['data']:
@@ -127,7 +130,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 driver_module, package=None
             ).process_row  # type: ignore
 
-            LOG.debug(f'Invoking process_row for the driver {driver_module}.')
+            LOG.info(f'Invoking process_row for the driver {driver_module}.')
             row_result = process_row(*path, **process_row_params)
             LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
 
