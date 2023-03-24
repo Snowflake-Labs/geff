@@ -132,7 +132,7 @@ def process_row(
             LOG.debug(f'Making request with {req}')
             res = urlopen(req)
             LOG.info(
-                f'Request length: {len(req.full_url) + len(req.headers) + len(req.data)}'
+                f'Request length: {len(req.full_url) + len(req.headers) + len(str(req.data)) }'
             )
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
