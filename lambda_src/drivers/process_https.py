@@ -124,12 +124,12 @@ def process_row(
 
     LOG.debug('Starting pagination.')
     while next_url:
-        LOG.debug(f'next_url is {next_url}.')
+        LOG.info(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 
         try:
-            LOG.debug(f'Making request with {req}')
+            LOG.info(f'Making request with {req}')
             res = urlopen(req)
             LOG.info(
                 f'Request length: {len(req.full_url) + len(req.headers) + len(str(req.data)) }'
@@ -156,7 +156,7 @@ def process_row(
                 if response_headers['Content-Type'] == 'application/json'
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
-            LOG.debug('Extracted data from response.')
+            LOG.info('Extracted data from response.')
 
             response = (
                 {
@@ -231,5 +231,5 @@ def process_row(
             row_data = result
             next_url = None
 
-    LOG.debug(f'Returning row_data with count: {len(row_data)}')
+    LOG.info(f'Returning row_data with count: {len(row_data)}')
     return row_data

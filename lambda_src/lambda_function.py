@@ -41,7 +41,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     batch_id = headers[BATCH_ID_HEADER]
     destination = headers['write-uri'] = headers.pop(DESTINATION_URI_HEADER)
     lambda_name = context.function_name
-    LOG.debug(f'async_flow_init() received destination: {destination}.')
+    LOG.info(f'async_flow_init() received destination: {destination}.')
 
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
@@ -49,13 +49,13 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     # Ignoring style due to dynamic import
     destination_driver.initialize(destination, batch_id)  # type: ignore
 
-    LOG.debug('Invoking child lambda.')
+    LOG.info('Invoking child lambda.')
     lambda_response = invoke_process_lambda(event, lambda_name)
     if lambda_response['StatusCode'] != 202:
         LOG.debug('Child lambda returned a non-202 status.')
         return create_response(400, 'Error invoking child lambda.')
     else:
-        LOG.debug('Child lambda returned 202.')
+        LOG.info('Child lambda returned 202.')
         return {'statusCode': 202}
 
 
@@ -102,7 +102,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
-    LOG.debug(f'sync_flow() received destination: {write_uri}.')
+    LOG.info(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
         destination_driver = import_module(
@@ -132,7 +132,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
             LOG.info(f'Invoking process_row for the driver {driver_module}.')
             row_result = process_row(*path, **process_row_params)
-            LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
+            LOG.info(f'Got row_result for URL: {process_row_params.get("url")}.')
 
             if write_uri:
                 # Write s3 data and return confirmation
@@ -202,7 +202,7 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     """
     method = event.get('httpMethod')
     headers = event['headers']
-    LOG.debug(f'lambda_handler() called.')
+    LOG.info(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
     batch_id = headers.get(BATCH_ID_HEADER)
