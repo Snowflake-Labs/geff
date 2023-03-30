@@ -11,7 +11,7 @@ import boto3
 
 PROD_ENV_NAME = 'prod'
 
-environment = os.getenv('ENV').lower()
+environment = os.getenv('ENV', '').lower()
 logging_level = logging.INFO if PROD_ENV_NAME in environment else logging.DEBUG
 
 logging.basicConfig(stream=sys.stdout)
