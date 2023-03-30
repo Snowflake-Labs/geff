@@ -9,9 +9,14 @@ from typing import Any, Dict, Optional, Text
 
 import boto3
 
+PROD_ENV_NAME = 'prod'
+
+environment = os.getenv('ENV').lower()
+logging_level = logging.INFO if PROD_ENV_NAME in environment else logging.DEBUG
+
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
+LOG.setLevel(logging_level)
 
 
 def pick(path: str, d: dict):
