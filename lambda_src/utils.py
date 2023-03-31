@@ -12,7 +12,7 @@ import boto3
 DEV_ENV_NAME = 'dev'
 
 environment = os.getenv('ENV', DEV_ENV_NAME).lower()
-logging_level = logging.debug if DEV_ENV_NAME in environment else logging.info
+logging_level = logging.DEBUG if DEV_ENV_NAME in environment else logging.INFO
 
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
