@@ -9,10 +9,10 @@ from typing import Any, Dict, Optional, Text
 
 import boto3
 
-PROD_ENV_NAME = 'prod'
+DEV_ENV_NAME = 'dev'
 
-environment = os.getenv('ENV', '').lower()
-logging_level = logging.INFO if PROD_ENV_NAME in environment else logging.DEBUG
+environment = os.getenv('ENV', DEV_ENV_NAME).lower()
+logging_level = logging.debug if DEV_ENV_NAME in environment else logging.info
 
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
