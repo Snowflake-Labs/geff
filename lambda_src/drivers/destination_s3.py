@@ -30,7 +30,7 @@ def parse_destination_uri(destination: Text) -> Tuple[Text, Text]:
     Returns:
         Tuple[Text, Text]: [description]
     """
-    LOG.debug(f'destination from header is {destination}')
+    LOG.info(f'destination from header is {destination}')
     parsed_url = urlparse(destination)
     return (parsed_url.netloc, strftime(parsed_url.path[1:]))  # remove leading slash
 

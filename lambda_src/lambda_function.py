@@ -35,13 +35,13 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response state and data.
     """
-    LOG.debug('Found a destination header and hence using async_flow_init().')
+    LOG.info('Found a destination header and hence using async_flow_init().')
 
     headers = event['headers']
     batch_id = headers[BATCH_ID_HEADER]
     destination = headers['write-uri'] = headers.pop(DESTINATION_URI_HEADER)
     lambda_name = context.function_name
-    LOG.info(f'async_flow_init() received destination: {destination}.')
+    LOG.debug(f'async_flow_init() received destination: {destination}.')
 
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
@@ -55,7 +55,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
         LOG.debug('Child lambda returned a non-202 status.')
         return create_response(400, 'Error invoking child lambda.')
     else:
-        LOG.info('Child lambda returned 202.')
+        LOG.debug('Child lambda returned 202.')
         return {'statusCode': 202}
 
 
@@ -71,7 +71,7 @@ def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
         Dict[Text, Any]: This is the return value with the status code of 200 or 202
         as per the status of the write.
     """
-    LOG.debug('async_flow_poll() called as destination header was not found in a GET.')
+    LOG.info('async_flow_poll() called as destination header was not found in a GET.')
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
@@ -97,7 +97,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response status and data.
     """
-    LOG.debug('Destination header not found in a POST and hence using sync_flow().')
+    LOG.info('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
