@@ -108,9 +108,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         destination_driver = import_module(
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
-        LOG.info('Invocation: asynchronous.')
-    else:
-        LOG.info('Invocation: synchronous.')
 
     res_data = []
 
@@ -164,7 +161,10 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'headers': {'Content-Encoding': 'gzip'},
         }
 
-    response_length = len(dumps(response))
+    response_length = len(dumps(response).encode())
+
+    LOG.info(f'Response size: {response_length} bytes')
+
     if response_length > 6_291_556:
         response = {
             'statusCode': 200,
@@ -205,7 +205,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.info(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
+    LOG.info(f'Request destination: {destination}')
+
     batch_id = headers.get(BATCH_ID_HEADER)
+    LOG.info(f'Request batch-id: {batch_id}')
 
     # httpMethod doesn't exist implies caller is base lambda.
     # This is required to break an infinite loop of child lambda creation.
@@ -214,8 +217,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
 
     # httpMethod exists implies caller is API Gateway
     if method == 'POST' and destination:
+        LOG.info('Invocation: asynchronous.')
         return async_flow_init(event, context)
     elif method == 'POST':
+        LOG.info('Invocation: synchronous.')
         return sync_flow(event, context)
     elif method == 'GET':
         return async_flow_poll(destination, batch_id)

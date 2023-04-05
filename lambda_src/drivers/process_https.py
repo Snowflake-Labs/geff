@@ -57,7 +57,7 @@ def process_row(
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
         auth = decrypt_if_encrypted(auth)
-        LOG.info('Secret accessed.')
+        LOG.info('Secret accessed in process_row for the HTTPS driver.')
 
         req_auth = (
             loads(auth)
@@ -80,22 +80,32 @@ def process_row(
         elif not auth_host:
             raise ValueError(f"'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
-            LOG.info('Basic authentication found in secret.')
+            LOG.info(
+                'Basic authentication scheme found in secret and added to the request headers for auth.'
+            )
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
-            LOG.info('Bearer token found in secret.')
+            LOG.info(
+                'Bearer token found in secret and added to the request headers for auth.'
+            )
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
-            LOG.info('authorization header found in secret.')
+            LOG.info(
+                "'authorization' key found in secret and added to the request headers for auth."
+            )
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
-            LOG.info('Authorization header found in secret.')
+            LOG.info(
+                'Headers key for authentication found in secret and added to the request for auth.'
+            )
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
-            LOG.info('Authorization body found in secret.')
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
+                LOG.info(
+                    "'body' key found in secret and added to the request headers for auth."
+                )
                 json = (
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
@@ -131,15 +141,22 @@ def process_row(
         try:
             LOG.info(f'Making request with {req}')
             res = urlopen(req)
-            LOG.info(
-                f'Request sent with length: {len(req.full_url).encode() + len(str(req.headers).encode()) + len(str(req.data).encode()) }'
-            )
+
+            url_size = len(req.full_url.encode())
+            headers_size = len(str(req.headers).encode())
+            data_size = len(str(req.data).encode())
+            req_size = url_size + headers_size + data_size
+
+            LOG.info(f'Request sent with size: {req_size} bytes, for URL: {next_url}')
+
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
             res_body = res.read()
-            LOG.info(f'Got the response body with length: {len(res_body)}')
+            LOG.info(
+                f'Got the response body with size: {len(res_body)} bytes, for URL: {next_url}'
+            )
 
             raw_response = (
                 decompress(res_body)
