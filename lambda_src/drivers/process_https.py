@@ -132,7 +132,7 @@ def process_row(
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
-    LOG.info('Starting pagination.')
+    LOG.debug('Starting pagination.')
     while next_url:
         LOG.info(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
