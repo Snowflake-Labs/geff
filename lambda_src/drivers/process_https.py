@@ -156,9 +156,11 @@ def process_row(
                 ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
+            response_status = res.status
             res_body = res.read()
             LOG.info(
-                'Got the response body with size: %d bytes, for URL: %s',
+                'Got the response with status code: %d and body size: %d bytes, for URL: %s',
+                response_status,
                 len(res_body),
                 next_url,
             )
@@ -184,6 +186,7 @@ def process_row(
                 {
                     'body': response_body,
                     'headers': response_headers,
+                    'status': response_status,
                     'responded_at': response_date,
                 }
                 if verbose
