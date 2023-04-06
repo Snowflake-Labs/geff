@@ -134,7 +134,6 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
             row_result = process_row(*path, **process_row_params)
 
-            LOG.info('Got row_result for URL: %s.', process_row_params.get("url"))
             LOG.debug(
                 '%s process_row invocation took %f ms. Row number: %d, batch-id: %s',
                 driver,
@@ -142,6 +141,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 row_number,
                 batch_id,
             )
+            LOG.info('Got row_result for URL: %s.', process_row_params.get("url"))
 
             if write_uri:
                 # Write s3 data and return confirmation
