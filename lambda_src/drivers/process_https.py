@@ -8,6 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from io import BytesIO
+from hashlib import sha256
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -78,7 +79,7 @@ def process_row(
             req_host = auth_host
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
-            raise ValueError(f"'auth' missing the 'host' key.")
+            raise ValueError("'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
             LOG.info(
                 'Basic authentication scheme found in secret and added to the request headers for auth.'
@@ -134,20 +135,22 @@ def process_row(
 
     LOG.debug('Starting pagination.')
     while next_url:
-        LOG.info(f'next_url is {next_url}.')
+        LOG.info('next_url is %s.', next_url)
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 
         try:
-            LOG.info(f'Making request with {req}')
+            LOG.debug(f'Making request with {req}')
             res = urlopen(req)
 
-            url_size = len(req.full_url.encode())
-            headers_size = len(str(req.headers).encode())
-            data_size = len(str(req.data).encode())
-            req_size = url_size + headers_size + data_size
+            req_obj_bytes = (req.full_url + str(req.headers) + str(req.data)).encode()
 
-            LOG.info(f'Request sent with size: {req_size} bytes, for URL: {next_url}')
+            LOG.info(
+                'Request sent with size: %d bytes and hash: %s, for URL: %s',
+                len(req_obj_bytes),
+                sha256(req_obj_bytes).hexdigest(),
+                next_url,
+            )
 
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
@@ -155,7 +158,9 @@ def process_row(
             response_headers = dict(res.getheaders())
             res_body = res.read()
             LOG.info(
-                f'Got the response body with size: {len(res_body)} bytes, for URL: {next_url}'
+                'Got the response body with size: %d bytes, for URL: %s',
+                len(res_body),
+                next_url,
             )
 
             raw_response = (
@@ -248,5 +253,5 @@ def process_row(
             row_data = result
             next_url = None
 
-    LOG.debug(f'Returning row_data with count: {len(row_data)}')
+    LOG.debug('Returning row_data with count: %d', len(row_data))
     return row_data

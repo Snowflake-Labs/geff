@@ -52,10 +52,10 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.info('Invoking child lambda.')
     lambda_response = invoke_process_lambda(event, lambda_name)
     if lambda_response['StatusCode'] != 202:
-        LOG.debug('Child lambda returned a non-202 status.')
+        LOG.info('Child lambda returned a non-202 status.')
         return create_response(400, 'Error invoking child lambda.')
     else:
-        LOG.debug('Child lambda returned 202.')
+        LOG.info('Child lambda returned 202.')
         return {'statusCode': 202}
 
 
@@ -102,7 +102,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
-    LOG.info(f'sync_flow() received destination: {write_uri}.')
+    LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
         destination_driver = import_module(
@@ -127,9 +127,9 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 driver_module, package=None
             ).process_row  # type: ignore
 
-            LOG.info(f'Invoking process_row for the driver {driver_module}.')
+            LOG.info('Invoking process_row for the driver %s.', driver_module)
             row_result = process_row(*path, **process_row_params)
-            LOG.info(f'Got row_result for URL: {process_row_params.get("url")}.')
+            LOG.info('Got row_result for URL: %s.', process_row_params.get("url"))
 
             if write_uri:
                 # Write s3 data and return confirmation
@@ -163,7 +163,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
     response_length = len(dumps(response).encode())
 
-    LOG.info(f'Response size: {response_length} bytes')
+    LOG.info('Response size: %d bytes', response_length)
 
     if response_length > 6_291_556:
         response = {
@@ -205,10 +205,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.info(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
-    LOG.info(f'Request destination: {destination}')
+    LOG.info('Request destination: %s', destination)
 
     batch_id = headers.get(BATCH_ID_HEADER)
-    LOG.info(f'Request batch-id: {batch_id}')
+    LOG.info('Request batch-id: %s', batch_id)
 
     # httpMethod doesn't exist implies caller is base lambda.
     # This is required to break an infinite loop of child lambda creation.
