@@ -96,7 +96,7 @@ def process_row(
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
             LOG.info(
-                'Headers key for authentication found in secret and added to the request for auth.'
+                'Headers key for authentication found in secret and added to the request headers for auth.'
             )
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
