@@ -7,6 +7,7 @@ from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
+from timeit import default_timer as timer
 
 from .log import format_trace
 from .utils import (
@@ -129,8 +130,18 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             ).process_row  # type: ignore
 
             LOG.info('Invoking process_row for the driver %s.', driver_module)
+            process_row_start_timer = timer()
+
             row_result = process_row(*path, **process_row_params)
+
             LOG.info('Got row_result for URL: %s.', process_row_params.get("url"))
+            LOG.debug(
+                '%s process_row invocation took %f ms. Row number: %d, batch-id: %s',
+                driver,
+                (timer() - process_row_start_timer),
+                row_number,
+                batch_id,
+            )
 
             if write_uri:
                 # Write s3 data and return confirmation
