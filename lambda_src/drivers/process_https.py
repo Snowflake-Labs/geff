@@ -146,7 +146,7 @@ def process_row(
             req_obj_bytes = (req.full_url + str(req.headers) + str(req.data)).encode()
 
             LOG.info(
-                'Request sent with size: %d bytes and hash: %s, for URL: %s',
+                'Request sent with size: %d bytes and sha256: %s, for URL: %s',
                 len(req_obj_bytes),
                 sha256(req_obj_bytes).hexdigest(),
                 next_url,
