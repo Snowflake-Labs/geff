@@ -147,7 +147,7 @@ def process_row(
             req_obj_bytes = (req.full_url + str(req.headers) + str(req.data)).encode()
 
             LOG.info(
-                'Request sent with size: %d bytes, type: %s and sha256: %s, for URL: %s',
+                'Request sent with size: %d bytes, type: %s and sha256: %s, for URL: %s.',
                 len(req_obj_bytes),
                 req_method,
                 sha256(req_obj_bytes).hexdigest(),
@@ -161,7 +161,7 @@ def process_row(
             response_status = res.status
             res_body = res.read()
             LOG.info(
-                'Got the response with status code: %d and body size: %d bytes, for URL: %s',
+                'Got the response with status code: %d and body size: %d bytes, for URL: %s.',
                 response_status,
                 len(res_body),
                 next_url,

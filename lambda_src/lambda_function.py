@@ -135,7 +135,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             row_result = process_row(*path, **process_row_params)
 
             LOG.debug(
-                '%s process_row invocation took %f ms. Row number: %d, batch-id: %s',
+                '%s process_row invocation took %f ms. Row number: %d, batch-id: %s.',
                 driver,
                 (timer() - process_row_start_timer),
                 row_number,
@@ -166,7 +166,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         )
         response_length = len(dumps(response).encode())
         LOG.info(
-            'Response written to S3 bucket. Size of the metadata to be returned: %d bytes',
+            'Response written to S3 bucket. Size of the metadata to be returned: %d bytes.',
             response_length,
         )
     else:
@@ -178,7 +178,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         response_length = len(dumps(response).encode())
-        LOG.info('Size of the response to be returned: %d bytes', response_length)
+        LOG.info('Size of the response to be returned: %d bytes.', response_length)
 
     if response_length > 6_291_556:
         response = {
@@ -220,10 +220,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     LOG.info(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
-    LOG.info('Request destination: %s', destination)
+    LOG.info('Request destination: %s.', destination)
 
     batch_id = headers.get(BATCH_ID_HEADER)
-    LOG.info('Request batch-id: %s', batch_id)
+    LOG.info('Request batch-id: %s.', batch_id)
 
     # httpMethod doesn't exist implies caller is base lambda.
     # This is required to break an infinite loop of child lambda creation.
