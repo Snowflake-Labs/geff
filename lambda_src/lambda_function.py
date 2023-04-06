@@ -110,6 +110,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         )
 
     res_data = []
+    response_length = None
 
     for row_number, *args in req_body['data']:
         row_result = []
@@ -152,6 +153,11 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         response = destination_driver.finalize(  # type: ignore
             write_uri, batch_id, res_data
         )
+        response_length = len(dumps(response).encode())
+        LOG.info(
+            'Response written to S3 bucket. Size of the metadata to be returned: %d bytes',
+            response_length,
+        )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
         response = {
@@ -160,10 +166,8 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
-
-    response_length = len(dumps(response).encode())
-
-    LOG.info('Response size: %d bytes', response_length)
+        response_length = len(dumps(response).encode())
+        LOG.info('Size of the response to be returned: %d bytes', response_length)
 
     if response_length > 6_291_556:
         response = {
