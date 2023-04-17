@@ -14,7 +14,7 @@ from ..vault import decrypt_if_encrypted
 
 
 def make_basic_header(auth):
-    return b"Basic " + b64encode(auth.encode())
+    return b'Basic ' + b64encode(auth.encode())
 
 
 def parse_header_dict(value):
@@ -23,36 +23,36 @@ def parse_header_dict(value):
 
 def process_row(
     data: Optional[Text] = None,
-    base_url: Text = "",
-    url: Text = "",
+    base_url: Text = '',
+    url: Text = '',
     json: Optional[Text] = None,
-    method: Text = "get",
-    headers: Text = "",
+    method: Text = 'get',
+    headers: Text = '',
     auth: Text = None,
-    params: Text = "",
+    params: Text = '',
     verbose: bool = False,
-    cursor: Text = "",
-    results_path: Text = "",
+    cursor: Text = '',
+    results_path: Text = '',
 ):
     if not base_url and not url:
-        raise ValueError("Missing required parameter. Need one of url or base-url.")
+        raise ValueError('Missing required parameter. Need one of url or base-url.')
 
     req_url = url if url.startswith(base_url) else base_url + url
     u = urlparse(req_url)
-    if u.scheme != "https":
-        raise ValueError("URL scheme must be HTTPS.")
+    if u.scheme != 'https':
+        raise ValueError('URL scheme must be HTTPS.')
 
     req_host = u.hostname
     req_headers = (
         loads(headers)
-        if headers.startswith("{")
+        if headers.startswith('{')
         else parse_header_dict(headers)
         if headers
         else {}
     )
 
-    req_headers.setdefault("User-Agent", "GEFF 1.0")
-    req_headers.setdefault("Accept-Encoding", "gzip")
+    req_headers.setdefault('User-Agent', 'GEFF 1.0')
+    req_headers.setdefault('Accept-Encoding', 'gzip')
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
@@ -60,12 +60,12 @@ def process_row(
 
         req_auth = (
             loads(auth)
-            if auth and auth.startswith("{")
+            if auth and auth.startswith('{')
             else parse_header_dict(auth)
             if auth
             else {}
         )
-        auth_host = req_auth.get("host")
+        auth_host = req_auth.get('host')
 
         # We reject the request if the 'auth' is present but doesn't match the pinned host.
         if auth_host and req_host and auth_host != req_host:
@@ -78,22 +78,22 @@ def process_row(
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
             raise ValueError(f"'auth' missing the 'host' key.")
-        elif "basic" in req_auth:
-            req_headers["Authorization"] = make_basic_header(req_auth["basic"])
-        elif "bearer" in req_auth:
-            req_headers["Authorization"] = f"Bearer {req_auth['bearer']}"
-        elif "authorization" in req_auth:
-            req_headers["authorization"] = req_auth["authorization"]
-        elif "headers" in req_auth:
-            req_headers.update(req_auth["headers"])
-        elif "body" in req_auth:
+        elif 'basic' in req_auth:
+            req_headers['Authorization'] = make_basic_header(req_auth['basic'])
+        elif 'bearer' in req_auth:
+            req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
+        elif 'authorization' in req_auth:
+            req_headers['authorization'] = req_auth['authorization']
+        elif 'headers' in req_auth:
+            req_headers.update(req_auth['headers'])
+        elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
                 json = (
-                    req_auth["body"]
-                    if isinstance(req_auth["body"], str)
-                    else dumps(req_auth["body"])
+                    req_auth['body']
+                    if isinstance(req_auth['body'], str)
+                    else dumps(req_auth['body'])
                 )
 
     # query, nextpage_path, results_path
@@ -104,42 +104,42 @@ def process_row(
 
     if json:
         req_data: Optional[bytes] = (
-            json if json.startswith("{") else dumps(parse_header_dict(json))
+            json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
-        req_headers["Content-Type"] = "application/json"
+        req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
 
     if req_params:
-        req_url += f"?{req_params}"
+        req_url += f'?{req_params}'
 
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
-    LOG.debug("Starting pagination.")
+    LOG.debug('Starting pagination.')
     while next_url:
-        LOG.debug(f"next_url is {next_url}.")
+        LOG.debug(f'next_url is {next_url}.')
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 
         try:
-            LOG.debug(f"Making request with {req}")
+            LOG.debug(f'Making request with {req}')
             res = urlopen(req)
             links_headers = parse_header_links(
-                ",".join(res.headers.get_all("link", []))
+                ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
             res_body = res.read()
-            LOG.debug(f"Got the response body with length: {len(res_body)}")
+            LOG.debug(f'Got the response body with length: {len(res_body)}')
 
             raw_response = (
                 decompress(res_body)
-                if res.headers.get("Content-Encoding") == "gzip"
+                if res.headers.get('Content-Encoding') == 'gzip'
                 else res_body
             )
             response_date = (
-                parsedate_to_datetime(response_headers["Date"]).isoformat()
-                if "Date" in response_headers
+                parsedate_to_datetime(response_headers['Date']).isoformat()
+                if 'Date' in response_headers
                 else None
             )
             response_body = (
@@ -147,13 +147,13 @@ def process_row(
                 if "application/json" in response_headers["Content-Type"]
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
-            LOG.debug("Extracted data from response.")
+            LOG.debug('Extracted data from response.')
 
             response = (
                 {
-                    "body": response_body,
-                    "headers": response_headers,
-                    "responded_at": response_date,
+                    'body': response_body,
+                    'headers': response_headers,
+                    'responded_at': response_date,
                 }
                 if verbose
                 else response_body
@@ -162,43 +162,43 @@ def process_row(
         except HTTPError as e:
             response_body = (
                 decompress(e.read())
-                if e.headers.get("Content-Encoding") == "gzip"
+                if e.headers.get('Content-Encoding') == 'gzip'
                 else e.read()
             ).decode()
-            content_type = e.headers.get("Content-Type", "")
+            content_type = e.headers.get('Content-Type', '')
             result = {
-                "error": "HTTPError",
-                "url": next_url,
-                "status": e.code,
-                "reason": e.reason,
-                "body": (
+                'error': 'HTTPError',
+                'url': next_url,
+                'status': e.code,
+                'reason': e.reason,
+                'body': (
                     loads(response_body)
-                    if content_type and content_type.startswith("application/json")
+                    if content_type and content_type.startswith('application/json')
                     else response_body
                 ),
             }
         except URLError as e:
             result = {
-                "error": f"URLError",
-                "reason": str(e.reason),
-                "host": req_host,
+                'error': f'URLError',
+                'reason': str(e.reason),
+                'host': req_host,
             }
         except JSONDecodeError as e:
             result = {
-                "error": "JSONDecodeError" if raw_response else "No Content",
-                "body": raw_response.decode(),
-                "status": res.status,
-                "responded_at": response_date,
+                'error': 'JSONDecodeError' if raw_response else 'No Content',
+                'body': raw_response.decode(),
+                'status': res.status,
+                'responded_at': response_date,
             }
 
         if req_cursor and isinstance(result, list):
             row_data += result
 
-            if ":" in req_cursor:
-                cursor_path, cursor_param = req_cursor.rsplit(":", 1)
+            if ':' in req_cursor:
+                cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
                 cursor_path = req_cursor
-                cursor_param = cursor_path.split(".")[-1]
+                cursor_param = cursor_path.split('.')[-1]
 
             cursor_value = pick(cursor_path, response)
 
@@ -206,21 +206,21 @@ def process_row(
                 cursor_value
                 if cursor_value
                 and isinstance(cursor_value, str)
-                and cursor_value.startswith("https://")
-                else f"{req_url}&{cursor_param}={cursor_value}"
+                and cursor_value.startswith('https://')
+                else f'{req_url}&{cursor_param}={cursor_value}'
                 if cursor_value
                 else None
             )
         elif links_headers and isinstance(result, list):
             row_data += result
             link_dict: Dict[Any, Any] = next(
-                (l for l in links_headers if l["rel"] == "next"), {}
+                (l for l in links_headers if l['rel'] == 'next'), {}
             )
-            nu: Optional[str] = link_dict.get("url")
+            nu: Optional[str] = link_dict.get('url')
             next_url = nu if nu != next_url else None
         else:
             row_data = result
             next_url = None
 
-    LOG.debug(f"Returning row_data with count: {len(row_data)}")
+    LOG.debug(f'Returning row_data with count: {len(row_data)}')
     return row_data
