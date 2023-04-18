@@ -16,8 +16,9 @@ def process_row(
     authorized_user_info=None,
     without_subject=False,
     subject=None,
-    scopes='[]',
+    scopes='null',
 ):
+    scopes = loads(scopes)
     if authorized_user_info is not None:
         creds = credentials.Credentials.from_authorized_user_info(
             loads(decrypt_if_encrypted(authorized_user_info)), scopes
@@ -29,7 +30,7 @@ def process_row(
         if subject is None or without_subject:
             creds = c.with_scopes(scopes)
         else:
-            creds = c.with_subject(subject).with_scopes(loads(scopes))
+            creds = c.with_subject(subject).with_scopes(scopes)
 
     service = build(service_name, version=service_version, credentials=creds)
     resource_name, *subresource_names = resource_name.split('.')
