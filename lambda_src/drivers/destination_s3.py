@@ -121,11 +121,11 @@ def write(
     s3_uri = f's3://{bucket}/{prefixed_filename}'
 
     LOG.info(
-        'Writing row result of %d bytes to the S3 bucket: %s. Row number: %d, batch-id: %s.',
-        len(encoded_datum),
-        bucket,
+        'Writing result of row number "%d" of batch "%s" with size "%d" bytes to the URI "%s"',
         row_index,
         batch_id,
+        len(encoded_datum),
+        bucket,
     )
     return {
         'response': write_to_s3(

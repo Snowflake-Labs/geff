@@ -36,7 +36,7 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response state and data.
     """
-    LOG.info('Found a destination header and hence using async_flow_init().')
+    LOG.debug('Found a destination header and hence using async_flow_init().')
 
     headers = event['headers']
     batch_id = headers[BATCH_ID_HEADER]
@@ -72,7 +72,7 @@ def async_flow_poll(destination: Text, batch_id: Text) -> Dict[Text, Any]:
         Dict[Text, Any]: This is the return value with the status code of 200 or 202
         as per the status of the write.
     """
-    LOG.info('async_flow_poll() called as destination header was not found in a GET.')
+    LOG.debug('async_flow_poll() called as destination header was not found in a GET.')
     destination_driver = import_module(
         f'geff.drivers.destination_{urlparse(destination).scheme}'
     )
@@ -98,7 +98,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     Returns:
         Dict[Text, Any]: Represents the response status and data.
     """
-    LOG.info('Destination header not found in a POST and hence using sync_flow().')
+    LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
@@ -134,19 +134,28 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
 
             row_result = process_row(*path, **process_row_params)
 
-            LOG.debug(
-                '%s process_row invocation took %f ms. Row number: %d, batch-id: %s.',
+            LOG.info(
+                '"%s" process_row invocation took "%.4f" ms. Row number "%d", batch "%s".',
                 driver,
                 (timer() - process_row_start_timer),
                 row_number,
                 batch_id,
             )
-            LOG.info('Got row_result for URL: %s.', process_row_params.get("url"))
 
             if write_uri:
                 # Write s3 data and return confirmation
+                destination_write_start_timer = timer()
+
                 row_result = destination_driver.write(  # type: ignore
                     format(write_uri, args), batch_id, row_result, row_number
+                )
+
+                LOG.info(
+                    '"%s" write invocation took "%.4f" ms. Row number "%d", batch "%s".',
+                    urlparse(write_uri).scheme,
+                    (timer() - destination_write_start_timer),
+                    row_number,
+                    batch_id,
                 )
 
         except Exception as e:
@@ -166,14 +175,19 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         )
         response_length = len(dumps(response).encode())
         LOG.info(
-            'Response written to S3 bucket. Size of the metadata to be returned: %d bytes.',
+            'Size of the metadata to be returned: "%d" bytes.',
             response_length,
         )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
+        encoded_data_dumps = data_dumps.encode()
+        LOG.info(
+            'Size of the response prior to gzip compression: "%d" bytes.',
+            len(encoded_data_dumps),
+        )
         response = {
             'statusCode': 200,
-            'body': b64encode(compress(data_dumps.encode())).decode(),
+            'body': b64encode(compress(encoded_data_dumps)).decode(),
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
@@ -217,7 +231,6 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     """
     method = event.get('httpMethod')
     headers = event['headers']
-    LOG.info(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
     LOG.info('Request destination: %s.', destination)
@@ -238,6 +251,7 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
         LOG.info('Invocation: synchronous.')
         return sync_flow(event, context)
     elif method == 'GET':
+        LOG.info('Invocation: polling.')
         return async_flow_poll(destination, batch_id)
 
     return create_response(400, 'Unexpected Request.')

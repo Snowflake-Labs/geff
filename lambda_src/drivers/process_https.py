@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from io import BytesIO
-from hashlib import sha256
+from hashlib import md5
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -69,6 +69,12 @@ def process_row(
         )
         auth_host = req_auth.get('host')
 
+        LOG.info(
+            'Host obtained from the request: "%s", host obtained from auth: "%s"',
+            req_host,
+            auth_host,
+        )
+
         # We reject the request if the 'auth' is present but doesn't match the pinned host.
         if auth_host and req_host and auth_host != req_host:
             raise ValueError(
@@ -81,36 +87,36 @@ def process_row(
         elif not auth_host:
             raise ValueError("'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
+            req_headers['Authorization'] = make_basic_header(req_auth['basic'])
             LOG.info(
                 'Basic authentication scheme found in secret and added to the request headers for auth.'
             )
-            req_headers['Authorization'] = make_basic_header(req_auth['basic'])
         elif 'bearer' in req_auth:
+            req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
             LOG.info(
                 'Bearer token found in secret and added to the request headers for auth.'
             )
-            req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
         elif 'authorization' in req_auth:
+            req_headers['authorization'] = req_auth['authorization']
             LOG.info(
                 "'authorization' key found in secret and added to the request headers for auth."
             )
-            req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
-            LOG.info(
-                'Headers key for authentication found in secret and added to the request headers for auth.'
-            )
             req_headers.update(req_auth['headers'])
+            LOG.info(
+                "'headers' key found in secret and added to the request headers for auth."
+            )
         elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
             else:
-                LOG.info(
-                    "'body' key found in secret and added to the request headers for auth."
-                )
                 json = (
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
                     else dumps(req_auth['body'])
+                )
+                LOG.info(
+                    "'body' key found in secret and added to the request body for auth."
                 )
 
     # query, nextpage_path, results_path
@@ -133,7 +139,6 @@ def process_row(
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
 
-    LOG.info('Making requests to host: %s', req_host)
     LOG.debug('Starting pagination.')
     while next_url:
         LOG.info('next_url is %s.', next_url)
@@ -141,16 +146,15 @@ def process_row(
         links_headers = None
 
         try:
-            LOG.debug(f'Making request with {req}')
             res = urlopen(req)
 
             req_obj_bytes = (req.full_url + str(req.headers) + str(req.data)).encode()
 
             LOG.info(
-                'Request sent with size: %d bytes, type: %s and sha256: %s, for URL: %s.',
+                'Request sent with size "%d" bytes, type "%s" and ETag "%s", to URL "%s".',
                 len(req_obj_bytes),
                 req_method,
-                sha256(req_obj_bytes).hexdigest(),
+                md5(req_obj_bytes).hexdigest(),
                 next_url,
             )
 
@@ -161,7 +165,7 @@ def process_row(
             response_status = res.status
             res_body = res.read()
             LOG.info(
-                'Got the response with status code: %d and body size: %d bytes, for URL: %s.',
+                'Got the response with status code "%d" and body size "%d" bytes, for URL "%s".',
                 response_status,
                 len(res_body),
                 next_url,
