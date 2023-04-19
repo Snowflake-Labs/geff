@@ -37,7 +37,11 @@ def finish_batch_processing(
                         [
                             row_num,
                             {
-                                'error': f"Response size for batch ID: {batch_id} is too large to be stored in the backend. {len(res_data)} row(s) and {len(dumps(response))} bytes (gzipped). This row's size: {len(dumps(row_res))} bytes. Decreasing MAX_BATCH_ROWS might help.",
+                                'error': (
+                                  f"Response size for batch ID: {batch_id} is too large to be stored in the backend. "
+                                  f"{len(res_data)} row(s) and {len(dumps(response))} bytes (gzipped). "
+                                  f"This row's size: {len(dumps(row_res))} bytes. Decreasing MAX_BATCH_ROWS might help."
+                                ),
                                 'response_hash': md5(
                                     dumps(response, sort_keys=True).encode()
                                 ).hexdigest(),
