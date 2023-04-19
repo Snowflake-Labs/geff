@@ -31,8 +31,10 @@ def finish_batch_processing(
     except ClientError as ce:
         if ce.response['Error']['Code'] == 'ValidationException' and res_data:
             LOG.error(ce)
-            error_dumps = dumps(
-                {
+            error_dumps = 
+            size_exceeded_response = {
+                'statusCode': 200,
+                'body': dumps({
                     'data': [
                         [
                             row_num,
@@ -49,11 +51,7 @@ def finish_batch_processing(
                         ]
                         for row_num, row_res in res_data
                     ]
-                }
-            )
-            size_exceeded_response = {
-                'statusCode': 200,
-                'body': error_dumps,
+                }),
             }
             table.put_item(
                 Item={
