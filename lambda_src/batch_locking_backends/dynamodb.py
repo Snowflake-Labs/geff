@@ -31,7 +31,6 @@ def finish_batch_processing(
     except ClientError as ce:
         if ce.response['Error']['Code'] == 'ValidationException' and res_data:
             LOG.error(ce)
-            error_dumps = 
             size_exceeded_response = {
                 'statusCode': 200,
                 'body': dumps({
