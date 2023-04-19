@@ -192,7 +192,7 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         response_length = len(dumps(response).encode())
-        LOG.info('Size of the response to be returned: %d bytes.', response_length)
+        LOG.info('Size of the response to be returned: "%d" bytes.', response_length)
 
     if response_length > 6_291_556:
         response = {

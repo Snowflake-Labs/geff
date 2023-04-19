@@ -262,5 +262,5 @@ def process_row(
             row_data = result
             next_url = None
 
-    LOG.debug('Returning row_data with count: %d', len(row_data))
+    LOG.debug('Returning row_data with count: "%d"', len(row_data))
     return row_data
