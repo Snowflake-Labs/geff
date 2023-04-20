@@ -144,7 +144,7 @@ def process_row(
             )
             response_body = (
                 loads(raw_response)
-                if response_headers('Content-Type', '').startswith('application/json') in 
+                if response_headers.get('Content-Type', '').startswith('application/json') in 
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
             LOG.debug('Extracted data from response.')
