@@ -17,7 +17,7 @@ LOG.setLevel(logging.DEBUG)
 def pick(path: str, d: dict):
     # path e.g. "a.b.c"
     retval: Optional[Any] = d
-    for p in path.split('.'):
+    for p in path.split("."):
         if p and retval:
             retval = retval.get(p)
     return retval
@@ -32,23 +32,23 @@ def parse_header_links(value):
     :rtype: list
     """
     links = []
-    replace_chars = ' \'"'
+    replace_chars = " '\""
 
     value = value.strip(replace_chars)
     if not value:
         return links
 
-    for val in re.split(', *<', value):
+    for val in re.split(", *<", value):
         try:
-            url, params = val.split(';', 1)
+            url, params = val.split(";", 1)
         except ValueError:
-            url, params = val, ''
+            url, params = val, ""
 
-        link = {'url': url.strip('<> \'"')}
+        link = {"url": url.strip("<> '\"")}
 
-        for param in params.split(';'):
+        for param in params.split(";"):
             try:
-                key, value = param.split('=')
+                key, value = param.split("=")
             except ValueError:
                 break
 
@@ -57,6 +57,21 @@ def parse_header_links(value):
         links.append(link)
 
     return links
+
+
+# required for hmac support
+def hmac_sha256_base64(signature_string, secret_key):
+
+    return base64.b64encode(
+        hmac.new(
+            secret_key.encode(), signature_string.encode(), hashlib.sha256
+        ).digest()
+    ).decode()
+
+
+# used to ensure json.loads does not perform implicit conversion
+def custom_object_hook(obj):
+    return obj
 
 
 def format(s, ps):
@@ -70,17 +85,17 @@ def format(s, ps):
 
     def replace_refs(s, ps):
         for i, p in enumerate(ps):
-            old = '{' + str(i) + '}'
+            old = "{" + str(i) + "}"
             new = dumps(p) if isinstance(p, (list, dict)) else str(p)
             s = s.replace(old, new)
         return s
 
-    m = re.match(r'{(\d+)}', s)
+    m = re.match(r"{(\d+)}", s)
     return ps[int(m.group(1))] if m else replace_refs(s, ps)
 
 
 def create_response(code: int, msg: Text) -> Dict[Text, Any]:
-    return {'statusCode': code, 'body': msg}
+    return {"statusCode": code, "body": msg}
 
 
 def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
@@ -98,11 +113,11 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # We call a child lambda to do the sync_flow and return a 202 to prevent timeout.
     lambda_client = boto3.client(
-        'lambda',
-        region_name=os.environ['AWS_REGION'],
+        "lambda",
+        region_name=os.environ["AWS_REGION"],
     )
     lambda_response = lambda_client.invoke(
-        FunctionName=lambda_name, InvocationType='Event', Payload=invoke_payload
+        FunctionName=lambda_name, InvocationType="Event", Payload=invoke_payload
     )
 
     # Returns 202 on success if InvocationType = 'Event'

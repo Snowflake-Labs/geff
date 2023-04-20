@@ -8,8 +8,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from io import BytesIO
-
-from ..utils import LOG, parse_header_links, pick
+from jinja2 import Environment
+import time
+from ..utils import LOG, parse_header_links, pick,hmac_sha256_base64,custom_object_hook
 from ..vault import decrypt_if_encrypted
 
 
@@ -85,7 +86,15 @@ def process_row(
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
-            req_headers.update(req_auth['headers'])
+            template = req_auth["headers"]
+            env = Environment()
+            env.globals["hmac_sha256_base64"] = hmac_sha256_base64
+            template_str = env.from_string(template)
+            timestamp = str(int(time.time()))
+            auth_params = {"path": url, "method": method, "timestamp": timestamp}
+            template_auth = template_str.render(auth_params)
+            auth_string = loads(template_auth, object_hook=custom_object_hook)
+            req_headers.update(auth_string)
         elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
