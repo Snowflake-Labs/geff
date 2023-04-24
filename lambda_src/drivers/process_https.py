@@ -8,9 +8,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from io import BytesIO
-from jinja2 import Environment
-import time
-from ..utils import LOG, parse_header_links, pick,hmac_sha256_base64,custom_object_hook
+from time import time
+
+from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
 
 
@@ -20,6 +20,14 @@ def make_basic_header(auth):
 
 def parse_header_dict(value):
     return {k: v for k, v in parse_qsl(value)}
+
+
+def render_jinja_template(template, params, global_functions):
+    import jinja2
+
+    e = jinja2.Environment()
+    e.globals.update(global_functions)
+    return e.from_string(template).render(params)
 
 
 def process_row(
@@ -57,7 +65,22 @@ def process_row(
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
-        auth = decrypt_if_encrypted(auth)
+        auth = render_jinja_template(
+            decrypt_if_encrypted(auth),
+            {'path': url, 'method': method},
+            {
+                'time': time,
+                'hmac_sha256_base64': lambda secret_key, signature_string: (
+                    b64encode(
+                        hmac.new(
+                            secret_key.encode(),
+                            signature_string.encode(),
+                            hashlib.sha256,
+                        ).digest()
+                    ).decode()
+                ),
+            },
+        )
 
         req_auth = (
             loads(auth)
@@ -86,15 +109,7 @@ def process_row(
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
         elif 'headers' in req_auth:
-            template = req_auth["headers"]
-            env = Environment()
-            env.globals["hmac_sha256_base64"] = hmac_sha256_base64
-            template_str = env.from_string(template)
-            timestamp = str(int(time.time()))
-            auth_params = {"path": url, "method": method, "timestamp": timestamp}
-            template_auth = template_str.render(auth_params)
-            auth_string = loads(template_auth, object_hook=custom_object_hook)
-            req_headers.update(auth_string)
+            req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
@@ -153,7 +168,9 @@ def process_row(
             )
             response_body = (
                 loads(raw_response)
-                if response_headers.get('Content-Type', '').startswith('application/json') 
+                if response_headers.get('Content-Type', '').startswith(
+                    'application/json'
+                )
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
             LOG.debug('Extracted data from response.')
