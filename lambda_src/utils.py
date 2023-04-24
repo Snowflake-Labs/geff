@@ -6,8 +6,10 @@ import sys
 from codecs import encode
 from json import dumps
 from typing import Any, Dict, Optional, Text
-
 import boto3
+import base64
+import hmac
+import hashlib
 
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
