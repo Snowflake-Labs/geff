@@ -1,14 +1,16 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
+from hashlib import sha256
+from hmac import new as new_hmac
+from io import BytesIO
 from json import JSONDecodeError, dumps, loads
 from re import match
+from time import time
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
-from io import BytesIO
-from time import time
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -52,6 +54,7 @@ def process_row(
         raise ValueError('URL scheme must be HTTPS.')
 
     req_host = u.hostname
+    req_path = u.path
     req_headers = (
         loads(headers)
         if headers.startswith('{')
@@ -67,15 +70,15 @@ def process_row(
     if auth:
         auth = render_jinja_template(
             decrypt_if_encrypted(auth),
-            {'path': url, 'method': method},
+            {'path': req_path, 'method': method, 'unixtime': int(time())},
             {
                 'time': time,
                 'hmac_sha256_base64': lambda secret_key, signature_string: (
                     b64encode(
-                        hmac.new(
+                        new_hmac(
                             secret_key.encode(),
                             signature_string.encode(),
-                            hashlib.sha256,
+                            sha256,
                         ).digest()
                     ).decode()
                 ),
