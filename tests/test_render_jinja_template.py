@@ -15,7 +15,7 @@ def test_render_jinja_template():
     auth = '{"Timestamp": "{{unixtime}}", "Authorization": "TC 1234:{{hmac_sha256_base64("querty", [path, method, unixtime]|join(":"))}}"}'
 
     render_jinja_template(
-        decrypt_if_encrypted(auth),
+        auth,
         {'path': req_path, 'method': method, 'unixtime': int(time())},
         {
             'time': time,
