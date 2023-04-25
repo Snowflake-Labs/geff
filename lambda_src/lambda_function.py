@@ -21,9 +21,9 @@ from .batch_locking_backends.dynamodb import (
     finish_batch_processing,
 )
 
-RESPONSE_SIZE_LIMIT = 6_291_556
-RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE = 20
-RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT = 30
+LAMBDA_RESPONSE_MAX_BYTES = 6_291_556
+SECONDS_BEFORE_LOCK_CACHE_STORAGE = 20
+SECONDS_BEFORE_GATEWAY_TIMEOUT = 30
 
 # pip install --target ./site-packages -r requirements.txt
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -152,40 +152,7 @@ def process_batch(
                 row_result,
             ]
         )
-
-    # Write data to s3 or return data synchronously
-    if write_uri:
-        response = destination_driver.finalize(  # type: ignore
-            write_uri, batch_id, res_data
-        )
-    else:
-        data_dumps = dumps({'data': res_data}, default=str)
-        response = {
-            'statusCode': 200,
-            'body': b64encode(compress(data_dumps.encode())).decode(),
-            'isBase64Encoded': True,
-            'headers': {'Content-Encoding': 'gzip'},
-        }
-        write_dynamodb_item(batch_id, response)
-
-    if len(response) > 6_000_000:
-        response = dumps(
-            {
-                'data': [
-                    [
-                        rn,
-                        {
-                            'error': (
-                                f'Response size ({len(response)} bytes) will likely'
-                                'exceeded maximum allowed payload size (6291556 bytes).'
-                            )
-                        },
-                    ]
-                    for rn, *args in req_body['data']
-                ]
-            }
-        )
-    return response
+    return res_data
 
 
 def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
@@ -220,7 +187,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             initialize_batch(batch_id)
         else:
             while is_batch_processing(batch_id):
-                if (timer() - start_time) > RESPONSE_TIME_BEFORE_GATEWAY_TIMEOUT:
+                if (timer() - start_time) > SECONDS_BEFORE_GATEWAY_TIMEOUT:
                     return None
 
             return get_response_for_batch(batch_id)
@@ -241,15 +208,12 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         end_time = timer()
-        if (
-            response
-            and (end_time - start_time) > RESPONSE_TIME_BEFORE_LOCK_CACHE_STORAGE
-        ):
+        if response and (end_time - start_time) > SECONDS_BEFORE_LOCK_CACHE_STORAGE:
             LOG.debug('Storing the response in lock cache.')
             finish_batch_processing(batch_id, response, res_data)  # write the response
 
     response_length = len(dumps(response))
-    if response_length > RESPONSE_SIZE_LIMIT:
+    if response_length > LAMBDA_RESPONSE_MAX_BYTES:
         response = construct_size_error_response(response_length, req_body)
     return response
 

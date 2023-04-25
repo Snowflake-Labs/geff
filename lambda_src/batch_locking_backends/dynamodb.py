@@ -15,7 +15,7 @@ DYNAMODB_RESOURCE = boto3.resource("dynamodb", region_name=AWS_REGION)
 if DYNAMODB_TABLE:
     table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
 
-TTL = 1800
+TTL = 86400
 LOCKED = '-1'
 
 
@@ -27,36 +27,38 @@ def finish_batch_processing(
     """
 
     try:
-        table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": 1800})
+        table.put_item(Item={"batch_id": batch_id, "response": response, "ttl": TTL})
     except ClientError as ce:
         if ce.response['Error']['Code'] == 'ValidationException' and res_data:
             LOG.error(ce)
             size_exceeded_response = {
                 'statusCode': 200,
-                'body': dumps({
-                    'data': [
-                        [
-                            row_num,
-                            {
-                                'error': (
-                                  f"Response size for batch ID: {batch_id} is too large to be stored in the backend. "
-                                  f"{len(res_data)} row(s) and {len(dumps(response))} bytes (gzipped). "
-                                  f"This row's size: {len(dumps(row_res))} bytes. Decreasing MAX_BATCH_ROWS might help."
-                                ),
-                                'response_hash': md5(
-                                    dumps(response, sort_keys=True).encode()
-                                ).hexdigest(),
-                            },
+                'body': dumps(
+                    {
+                        'data': [
+                            [
+                                row_num,
+                                {
+                                    'error': (
+                                        f'Response size for batch ID "{batch_id}" is too large to be stored in the backend. '
+                                        f'"{len(res_data)}" row(s) and "{len(dumps(response))}" bytes (gzipped). '
+                                        f'This row\'s size: "{len(dumps(row_res))}" bytes. Decreasing MAX_BATCH_ROWS might help.'
+                                    ),
+                                    'response_hash': md5(
+                                        dumps(response, sort_keys=True).encode()
+                                    ).hexdigest(),
+                                },
+                            ]
+                            for row_num, row_res in res_data
                         ]
-                        for row_num, row_res in res_data
-                    ]
-                }),
+                    }
+                ),
             }
             table.put_item(
                 Item={
                     "batch_id": batch_id,
                     "response": size_exceeded_response,
-                    "ttl": 1800,
+                    "ttl": TTL,
                 }
             )
 
@@ -65,7 +67,7 @@ def initialize_batch(batch_id: Text):
     """
     Initialize an item in the batch-locking table with a null response
     """
-    table.put_item(Item={"batch_id": batch_id, "response": "-1", "ttl": 1800})
+    table.put_item(Item={"batch_id": batch_id, "response": "-1", "ttl": TTL})
 
 
 def get_response_for_batch(batch_id: Text):
