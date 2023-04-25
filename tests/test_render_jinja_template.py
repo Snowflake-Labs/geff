@@ -1,6 +1,7 @@
 from base64 import b64encode
 from urllib.parse import urlparse
 from time import time
+from hashlib import sha256
 from hmac import new as new_hmac
 
 from lambda_src.drivers.process_https import render_jinja_template
@@ -24,7 +25,7 @@ def test_render_jinja_template():
                     new_hmac(
                         secret_key.encode(),
                         signature_string.encode(),
-                        hashlib.sha256,
+                        sha256,
                     ).digest()
                 ).decode()
             ),
