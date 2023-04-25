@@ -102,7 +102,7 @@ def process_batch(
     req_body: Dict[Text, Any],
     event_path: Text,
     destination_driver: Optional[ModuleType],
-) -> List[Tuple[int, Union[Dict, List]]]:
+) -> List[Tuple[int, Dict]]:
     """
     Processes a request and returns the result data.
 
@@ -111,9 +111,9 @@ def process_batch(
         destination_driver (Optional[ModuleType]): The destination driver such as S3.
 
     Returns:
-        List[Tuple[int, dict]]: Result data returned after the request is processed.
+        List[Tuple[int, Dict]]: Result data returned after the request is processed.
     """
-    res_data: List[Tuple[int, Union[Dict, List]]] = []
+    res_data: List[Tuple[int, Dict]] = []
 
     for row_number, *args in req_body['data']:
         process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}
