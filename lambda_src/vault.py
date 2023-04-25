@@ -6,8 +6,8 @@ import boto3
 from botocore.exceptions import ClientError, HTTPClientError
 
 
-AWS_REGION = environ.get('AWS_REGION')
-KMS_KEY = environ.get('AWS_REGION')
+AWS_REGION = environ.get('AWS_REGION', 'us-west-2')
+KMS_KEY = environ.get('AWS_REGION', 'us-west-2')
 ENABLED = bool(KMS_KEY)
 
 kms = boto3.client('kms', region_name=AWS_REGION)
@@ -20,7 +20,10 @@ def decrypt_if_encrypted(
     if envar:
         ct = environ.get(envar)
 
-    if ct and (ct.startswith('arn:aws:secretsmanager:') or ct.startswith('arn:aws-us-gov:secretsmanager:')):
+    if ct and (
+        ct.startswith('arn:aws:secretsmanager:')
+        or ct.startswith('arn:aws-us-gov:secretsmanager:')
+    ):
         return secretsmanager.get_secret_value(SecretId=ct).get('SecretString')
 
     # 1-byte plaintext has 205-byte ct
