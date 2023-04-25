@@ -8,6 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from io import BytesIO
+from hashlib import md5
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -57,6 +58,7 @@ def process_row(
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
         auth = decrypt_if_encrypted(auth)
+        LOG.info('Secret accessed in process_row for the HTTPS driver.')
 
         req_auth = (
             loads(auth)
@@ -66,6 +68,12 @@ def process_row(
             else {}
         )
         auth_host = req_auth.get('host')
+
+        LOG.info(
+            'Host obtained from the request: "%s", host obtained from auth: "%s"',
+            req_host,
+            auth_host,
+        )
 
         # We reject the request if the 'auth' is present but doesn't match the pinned host.
         if auth_host and req_host and auth_host != req_host:
@@ -77,15 +85,27 @@ def process_row(
             req_host = auth_host
         # We make unauthenticated request if the 'host' key is missing.
         elif not auth_host:
-            raise ValueError(f"'auth' missing the 'host' key.")
+            raise ValueError("'auth' missing the 'host' key.")
         elif 'basic' in req_auth:
             req_headers['Authorization'] = make_basic_header(req_auth['basic'])
+            LOG.info(
+                'Basic authentication scheme found in secret and added to the request headers for auth.'
+            )
         elif 'bearer' in req_auth:
             req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
+            LOG.info(
+                'Bearer token found in secret and added to the request headers for auth.'
+            )
         elif 'authorization' in req_auth:
             req_headers['authorization'] = req_auth['authorization']
+            LOG.info(
+                "'authorization' key found in secret and added to the request headers for auth."
+            )
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
+            LOG.info(
+                "'headers' key found in secret and added to the request headers for auth."
+            )
         elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
@@ -94,6 +114,9 @@ def process_row(
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
                     else dumps(req_auth['body'])
+                )
+                LOG.info(
+                    "'body' key found in secret and added to the request body for auth."
                 )
 
     # query, nextpage_path, results_path
@@ -118,19 +141,35 @@ def process_row(
 
     LOG.debug('Starting pagination.')
     while next_url:
-        LOG.debug(f'next_url is {next_url}.')
+        LOG.info('next_url is %s.', next_url)
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 
         try:
-            LOG.debug(f'Making request with {req}')
             res = urlopen(req)
+
+            req_obj_bytes = (req.full_url + str(req.headers) + str(req.data)).encode()
+
+            LOG.info(
+                'Request sent with size "%d" bytes, type "%s" and ETag "%s", to URL "%s".',
+                len(req_obj_bytes),
+                req_method,
+                md5(req_obj_bytes).hexdigest(),
+                next_url,
+            )
+
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )
             response_headers = dict(res.getheaders())
+            response_status = res.status
             res_body = res.read()
-            LOG.debug(f'Got the response body with length: {len(res_body)}')
+            LOG.info(
+                'Got the response with status code "%d" and body size "%d" bytes, for URL "%s".',
+                response_status,
+                len(res_body),
+                next_url,
+            )
 
             raw_response = (
                 decompress(res_body)
@@ -153,6 +192,7 @@ def process_row(
                 {
                     'body': response_body,
                     'headers': response_headers,
+                    'status': response_status,
                     'responded_at': response_date,
                 }
                 if verbose
@@ -222,5 +262,5 @@ def process_row(
             row_data = result
             next_url = None
 
-    LOG.debug(f'Returning row_data with count: {len(row_data)}')
+    LOG.debug('Returning row_data with count: "%d"', len(row_data))
     return row_data

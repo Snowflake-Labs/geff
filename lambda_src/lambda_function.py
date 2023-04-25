@@ -7,6 +7,7 @@ from importlib import import_module
 from json import dumps, loads
 from typing import Any, Dict, Text
 from urllib.parse import urlparse
+from timeit import default_timer as timer
 
 from .log import format_trace
 from .utils import (
@@ -49,13 +50,13 @@ def async_flow_init(event: Any, context: Any) -> Dict[Text, Any]:
     # Ignoring style due to dynamic import
     destination_driver.initialize(destination, batch_id)  # type: ignore
 
-    LOG.debug('Invoking child lambda.')
+    LOG.info('Invoking child lambda.')
     lambda_response = invoke_process_lambda(event, lambda_name)
     if lambda_response['StatusCode'] != 202:
-        LOG.debug('Child lambda returned a non-202 status.')
+        LOG.info('Child lambda returned a non-202 status.')
         return create_response(400, 'Error invoking child lambda.')
     else:
-        LOG.debug('Child lambda returned 202.')
+        LOG.info('Child lambda returned 202.')
         return {'statusCode': 202}
 
 
@@ -102,14 +103,15 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
     req_body = loads(event['body'])
     write_uri = headers.get('write-uri')
     batch_id = headers[BATCH_ID_HEADER]
-
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
     if write_uri:
         destination_driver = import_module(
             f'geff.drivers.destination_{urlparse(write_uri).scheme}'
         )
+
     res_data = []
+    response_length = None
 
     for row_number, *args in req_body['data']:
         row_result = []
@@ -127,14 +129,33 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
                 driver_module, package=None
             ).process_row  # type: ignore
 
-            LOG.debug(f'Invoking process_row for the driver {driver_module}.')
+            LOG.info('Invoking process_row for the driver %s.', driver_module)
+            process_row_start_timer = timer()
+
             row_result = process_row(*path, **process_row_params)
-            LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
+
+            LOG.info(
+                '"%s" process_row invocation took "%.4f" ms. Row number "%d", batch "%s".',
+                driver,
+                (timer() - process_row_start_timer),
+                row_number,
+                batch_id,
+            )
 
             if write_uri:
                 # Write s3 data and return confirmation
+                destination_write_start_timer = timer()
+
                 row_result = destination_driver.write(  # type: ignore
                     format(write_uri, args), batch_id, row_result, row_number
+                )
+
+                LOG.info(
+                    '"%s" write invocation took "%.4f" ms. Row number "%d", batch "%s".',
+                    urlparse(write_uri).scheme,
+                    (timer() - destination_write_start_timer),
+                    row_number,
+                    batch_id,
                 )
 
         except Exception as e:
@@ -152,16 +173,27 @@ def sync_flow(event: Any, context: Any = None) -> Dict[Text, Any]:
         response = destination_driver.finalize(  # type: ignore
             write_uri, batch_id, res_data
         )
+        response_length = len(dumps(response).encode())
+        LOG.info(
+            'Size of the metadata to be returned: "%d" bytes.',
+            response_length,
+        )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
+        encoded_data_dumps = data_dumps.encode()
+        LOG.info(
+            'Size of the response prior to gzip compression: "%d" bytes.',
+            len(encoded_data_dumps),
+        )
         response = {
             'statusCode': 200,
-            'body': b64encode(compress(data_dumps.encode())).decode(),
+            'body': b64encode(compress(encoded_data_dumps)).decode(),
             'isBase64Encoded': True,
             'headers': {'Content-Encoding': 'gzip'},
         }
+        response_length = len(dumps(response).encode())
+        LOG.info('Size of the response to be returned: "%d" bytes.', response_length)
 
-    response_length = len(dumps(response))
     if response_length > 6_291_556:
         response = {
             'statusCode': 200,
@@ -199,10 +231,12 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     """
     method = event.get('httpMethod')
     headers = event['headers']
-    LOG.debug(f'lambda_handler() called.')
 
     destination = headers.get(DESTINATION_URI_HEADER)
+    LOG.info('Request destination: %s.', destination)
+
     batch_id = headers.get(BATCH_ID_HEADER)
+    LOG.info('Request batch-id: %s.', batch_id)
 
     # httpMethod doesn't exist implies caller is base lambda.
     # This is required to break an infinite loop of child lambda creation.
@@ -211,10 +245,13 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
 
     # httpMethod exists implies caller is API Gateway
     if method == 'POST' and destination:
+        LOG.info('Invocation: asynchronous.')
         return async_flow_init(event, context)
     elif method == 'POST':
+        LOG.info('Invocation: synchronous.')
         return sync_flow(event, context)
     elif method == 'GET':
+        LOG.info('Invocation: polling.')
         return async_flow_poll(destination, batch_id)
 
     return create_response(400, 'Unexpected Request.')
