@@ -1,13 +1,16 @@
 from base64 import b64encode
 from email.utils import parsedate_to_datetime
 from gzip import decompress
+from hashlib import sha256
+from hmac import new as new_hmac
+from io import BytesIO
 from json import JSONDecodeError, dumps, loads
 from re import match
+from time import time
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
-from io import BytesIO
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -19,6 +22,14 @@ def make_basic_header(auth):
 
 def parse_header_dict(value):
     return {k: v for k, v in parse_qsl(value)}
+
+
+def render_jinja_template(template, params, global_functions):
+    import jinja2
+
+    e = jinja2.Environment()
+    e.globals.update(global_functions)
+    return e.from_string(template).render(params)
 
 
 def process_row(
@@ -43,6 +54,7 @@ def process_row(
         raise ValueError('URL scheme must be HTTPS.')
 
     req_host = u.hostname
+    req_path = u.path
     req_headers = (
         loads(headers)
         if headers.startswith('{')
@@ -56,7 +68,22 @@ def process_row(
 
     # We look for an auth header and if found, we parse it from its encoded format
     if auth:
-        auth = decrypt_if_encrypted(auth)
+        auth = render_jinja_template(
+            decrypt_if_encrypted(auth),
+            {'path': req_path, 'method': method, 'unixtime': int(time())},
+            {
+                'time': time,
+                'hmac_sha256_base64': lambda secret_key, signature_string: (
+                    b64encode(
+                        new_hmac(
+                            secret_key.encode(),
+                            signature_string.encode(),
+                            sha256,
+                        ).digest()
+                    ).decode()
+                ),
+            },
+        )
 
         req_auth = (
             loads(auth)
@@ -144,7 +171,9 @@ def process_row(
             )
             response_body = (
                 loads(raw_response)
-                if response_headers.get('Content-Type', '').startswith('application/json') in 
+                if response_headers.get('Content-Type', '').startswith(
+                    'application/json'
+                )
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
             LOG.debug('Extracted data from response.')
