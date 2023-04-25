@@ -34,7 +34,6 @@ def process_row(
     use_ssl=True,
     use_tls=True,
 ):
-
     user = decrypt_if_encrypted(user)
     password = decrypt_if_encrypted(password)
     sender_email = sender_email or user
