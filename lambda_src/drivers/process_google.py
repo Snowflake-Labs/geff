@@ -16,8 +16,9 @@ def process_row(
     authorized_user_info=None,
     without_subject=False,
     subject=None,
-    scopes=None,
+    scopes='null',
 ):
+    scopes = loads(scopes)
     if authorized_user_info is not None:
         creds = credentials.Credentials.from_authorized_user_info(
             loads(decrypt_if_encrypted(authorized_user_info)), scopes
