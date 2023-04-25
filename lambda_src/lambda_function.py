@@ -5,7 +5,7 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Optional, List
+from typing import Any, Dict, Text, Optional, List, Tuple, Union
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
@@ -22,7 +22,7 @@ from .batch_locking_backends.dynamodb import (
 )
 
 LAMBDA_RESPONSE_MAX_BYTES = 6_291_556
-SECONDS_BEFORE_LOCK_CACHE_STORAGE = 20
+SECONDS_BEFORE_BATCH_LOCKING_BACKEND_STORAGE = 20
 SECONDS_BEFORE_GATEWAY_TIMEOUT = 30
 
 # pip install --target ./site-packages -r requirements.txt
@@ -96,37 +96,30 @@ def async_flow_poll(destination: Text, batch_id: Text) -> ResponseType:
 
 
 def process_batch(
-    event: Any,
+    driver_kwargs: Dict[Text, Any],
+    write_uri: Text,
+    batch_id: Text,
+    req_body: Dict[Text, Any],
+    event_path: Text,
     destination_driver: Optional[ModuleType],
-) -> List[List[Any]]:
+) -> List[Tuple[int, Union[Dict, List]]]:
     """
     Processes a request and returns the result data.
 
     Args:
         event (Any): This is the event object as received by the lambda_handler().
-        destination_driver (Optional[ModuleType]): The destination driver such as S3. Defaults to None.
+        destination_driver (Optional[ModuleType]): The destination driver such as S3.
 
     Returns:
-        List[List[Any]]: Result data returned after the request is processed.
+        List[Tuple[int, dict]]: Result data returned after the request is processed.
     """
-    res_data = []
-    headers = event['headers']
-    req_body = loads(event['body'])
-    write_uri = headers.get('write-uri')
-    batch_id = headers[BATCH_ID_HEADER]
-
-    processed_headers = {
-        k.replace('sf-custom-', '').replace('-', '_'): v
-        for k, v in headers.items()
-        if k.startswith('sf-custom-')
-    }
+    res_data: List[Tuple[int, Union[Dict, List]]] = []
 
     for row_number, *args in req_body['data']:
-        row_result = []
-        process_row_params = {k: format(v, args) for k, v in processed_headers.items()}
+        process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}
 
         try:
-            driver, *path = event['path'].lstrip('/').split('/')
+            driver, *path = event_path.lstrip('/').split('/')
             driver = driver.replace('-', '_')
             driver_module = f'geff.drivers.process_{driver}'
             process_row = import_module(
@@ -192,7 +185,20 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
 
             return get_response_for_batch(batch_id)
 
-    res_data = process_batch(event, destination_driver)
+    driver_kwargs = {
+        k.replace('sf-custom-', '').replace('-', '_'): v
+        for k, v in headers.items()
+        if k.startswith('sf-custom-')
+    }
+
+    res_data = process_batch(
+        driver_kwargs,
+        write_uri,
+        batch_id,
+        req_body,
+        event['path'],
+        destination_driver,
+    )
 
     # Write data to s3 or return data synchronously
     if destination_driver:
@@ -208,8 +214,8 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         end_time = timer()
-        if response and (end_time - start_time) > SECONDS_BEFORE_LOCK_CACHE_STORAGE:
-            LOG.debug('Storing the response in lock cache.')
+        if (end_time - start_time) > SECONDS_BEFORE_BATCH_LOCKING_BACKEND_STORAGE:
+            LOG.debug('Storing the response in the batch locking backend.')
             finish_batch_processing(batch_id, response, res_data)  # write the response
 
     response_length = len(dumps(response))
