@@ -16,7 +16,7 @@ pack:
 	rsync -aP ./lambda_src/* ./geff/
 
 	# 4. zip everything up
-	zip -r -D lambda_archive.zip ./geff/
+	cd geff; zip -r -D ../lambda_archive.zip *
 
 	# 5. Clean up archive dir
 	rm -rf ./geff
