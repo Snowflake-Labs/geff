@@ -23,12 +23,12 @@ from botocore.exceptions import ClientError
 from ..utils import LOG, ResponseType
 
 AWS_REGION = os.environ.get(
-    "AWS_REGION", "us-west-2"
+    'AWS_REGION', 'us-west-2'
 )  # Placeholder while in dev TODO: change as variable/header
-DYNAMODB_TABLE = os.environ.get("DYNAMODB_TABLE_NAME")
-TTL = os.environ.get("DYNAMODB_TABLE_TTL", 86400)
+DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE_NAME')
+TTL = os.environ.get('DYNAMODB_TABLE_TTL', 86400)
 
-DYNAMODB_RESOURCE = boto3.resource("dynamodb", region_name=AWS_REGION)
+DYNAMODB_RESOURCE = boto3.resource('dynamodb', region_name=AWS_REGION)
 if DYNAMODB_TABLE:
     table = DYNAMODB_RESOURCE.Table(DYNAMODB_TABLE)
 
@@ -45,10 +45,10 @@ def finish_batch_processing(
     try:
         table.put_item(
             Item={
-                "batch_id": batch_id,
-                "locked": False,
-                "response": response,
-                "ttl": TTL,
+                'batch_id': batch_id,
+                'locked': False,
+                'response': response,
+                'ttl': TTL,
             }
         )
     except ClientError as ce:
@@ -80,9 +80,9 @@ def finish_batch_processing(
             }
             table.put_item(
                 Item={
-                    "batch_id": batch_id,
-                    "response": size_exceeded_response,
-                    "ttl": TTL,
+                    'batch_id': batch_id,
+                    'response': size_exceeded_response,
+                    'ttl': TTL,
                 }
             )
 
@@ -91,14 +91,14 @@ def initialize_batch(batch_id: Text):
     """
     Initialize an item in the batch-locking table with a null response
     """
-    table.put_item(Item={"batch_id": batch_id, "locked": True, "ttl": TTL})
+    table.put_item(Item={'batch_id': batch_id, 'locked': True, 'ttl': TTL})
 
 
 def _get_lock(batch_id: Text):
     """
     Retreive lock for a batch id
     """
-    item = table.get_item(Key={"batch_id": batch_id})
+    item = table.get_item(Key={'batch_id': batch_id})
 
     return item['Item']['locked'] if 'Item' in item else None
 
@@ -121,6 +121,6 @@ def get_response_for_batch(batch_id: Text):
     """
     Retreive response for a batch id
     """
-    item = table.get_item(Key={"batch_id": batch_id})
+    item = table.get_item(Key={'batch_id': batch_id})
 
     return item['Item']['response'] if 'Item' in item else None
