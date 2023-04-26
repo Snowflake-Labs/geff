@@ -257,6 +257,7 @@ def construct_size_error_response(
     )
     return {
         'statusCode': 200,
+        'headers': {'Content-Type': 'application/json'},
         'body': error_dumps,
     }
 

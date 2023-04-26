@@ -1,13 +1,17 @@
-# This backend helps lock batches so that they are not processed twice when the API Gateway times out and Snowflake retries the request.
-# Each batch has a lock that goes through three states:
-# 1.  Un-initialized batch has not yet been seen by GEFF and so a lock does not exist
-# 2.  Initialized batch is "processing" and has a "locked" lock while the call driver is running
-# 3.  Finished batch means a call driver has responded or timed out and the lock is "unlocked" and stores the response
-#
-# In dynamodb, this will correspond to Items like:
-# 1.  No item
-# 2.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": true}
-# 3.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": false, "response": ...}
+'''
+This backend helps lock batches so that they are not processed twice when the API Gateway times out and Snowflake retries the request.
+
+Each batch has a lock that goes through three states:
+
+1.  Un-initialized batch has not yet been seen by GEFF and so a lock does not exist
+2.  Initialized batch is "processing" and has a "locked" lock while the call driver is running
+3.  Finished batch means a call driver has responded or timed out and the lock is "unlocked" and stores the response
+
+In dynamodb, this will correspond to Items like:
+1.  No item
+2.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": true}
+3.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": false, "response": ...}
+'''
 
 import os
 from typing import Dict, Text, List, Any, Tuple, Union
@@ -90,9 +94,9 @@ def initialize_batch(batch_id: Text):
     table.put_item(Item={"batch_id": batch_id, "locked": True, "ttl": TTL})
 
 
-def get_lock(batch_id: Text):
+def _get_lock(batch_id: Text):
     """
-    Retreive response for a batch id
+    Retreive lock for a batch id
     """
     item = table.get_item(Key={"batch_id": batch_id})
 
@@ -103,14 +107,14 @@ def is_batch_processing(batch_id: Text):
     """
     Check if a batch id is being processed already, i.e is locked.
     """
-    return get_lock(batch_id)
+    return _get_lock(batch_id) is True
 
 
 def is_batch_initialized(batch_id: Text):
     """
     Check if a batch id has been initialized in the batch-locking table.
     """
-    return get_lock(batch_id) is not None
+    return _get_lock(batch_id) is not None
 
 
 def get_response_for_batch(batch_id: Text):
