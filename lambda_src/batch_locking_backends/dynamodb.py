@@ -81,6 +81,7 @@ def finish_batch_processing(
             table.put_item(
                 Item={
                     'batch_id': batch_id,
+                    'locked': False,
                     'response': size_exceeded_response,
                     'ttl': TTL,
                 }
