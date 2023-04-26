@@ -49,12 +49,16 @@ def process_row(
         raise ValueError('Missing required parameter. Need one of url or base-url.')
 
     req_url = url if url.startswith(base_url) else base_url + url
-    u = urlparse(req_url)
-    if u.scheme != 'https':
+
+    req_params: str = params
+    if req_params:
+        req_url += f'?{req_params}'
+
+    parsed_url = urlparse(req_url)
+    if parsed_url.scheme != 'https':
         raise ValueError('URL scheme must be HTTPS.')
 
-    req_host = u.hostname
-    req_path = u.path
+    req_host = parsed_url.hostname
     req_headers = (
         loads(headers)
         if headers.startswith('{')
@@ -70,7 +74,12 @@ def process_row(
     if auth:
         auth = render_jinja_template(
             decrypt_if_encrypted(auth),
-            {'path': req_path, 'method': method, 'unixtime': int(time())},
+            {
+                'path': parsed_url.path,
+                'query': parsed_url.query,
+                'method': method,
+                'unixtime': int(time()),
+            },
             {
                 'time': time,
                 'hmac_sha256_base64': lambda secret_key, signature_string: (
@@ -124,7 +133,6 @@ def process_row(
                 )
 
     # query, nextpage_path, results_path
-    req_params: str = params
     req_results_path: str = results_path
     req_cursor: str = cursor
     req_method: str = method.upper()
@@ -136,9 +144,6 @@ def process_row(
         req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
-
-    if req_params:
-        req_url += f'?{req_params}'
 
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
