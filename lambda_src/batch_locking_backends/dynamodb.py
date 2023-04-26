@@ -32,7 +32,7 @@ if DYNAMODB_TABLE:
 def finish_batch_processing(
     batch_id: Text,
     response: ResponseType,
-    res_data: List[Tuple[int, Dict]] = None,
+    res_data: List[List[Union[int, Dict]]] = None,
 ):
     """
     Write to the batch-locking table, a batch id, response and TTL
