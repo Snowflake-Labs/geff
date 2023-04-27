@@ -19,6 +19,7 @@ from .batch_locking_backends.dynamodb import (
     is_batch_processing,
     get_response_for_batch,
     finish_batch_processing,
+    BATCH_LOCKING_ENABLED,
 )
 
 LAMBDA_RESPONSE_MAX_BYTES = 6_291_556
@@ -176,7 +177,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
 
     LOG.debug(f'sync_flow() received destination: {write_uri}.')
 
-    if not destination_driver:
+    if BATCH_LOCKING_ENABLED and not destination_driver:
         if not is_batch_initialized(batch_id):
             initialize_batch(batch_id)
         else:
@@ -215,7 +216,10 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
             'headers': {'Content-Encoding': 'gzip'},
         }
         end_time = timer()
-        if (end_time - start_time) > SECONDS_BEFORE_BATCH_LOCKING_BACKEND_STORAGE:
+        if (
+            BATCH_LOCKING_ENABLED
+            and (end_time - start_time) > SECONDS_BEFORE_BATCH_LOCKING_BACKEND_STORAGE
+        ):
             LOG.debug('Storing the response in the batch locking backend.')
             finish_batch_processing(batch_id, response, res_data)  # write the response
 
