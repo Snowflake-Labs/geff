@@ -100,7 +100,7 @@ def process_batch(
     driver_kwargs: Dict[Text, Any],
     write_uri: Text,
     batch_id: Text,
-    req_body: Dict[Text, Any],
+    req_body_data: List[List[Union[int, str]]],
     event_path: Text,
     destination_driver: Optional[ModuleType],
 ) -> List[List[Union[int, Dict]]]:
@@ -117,7 +117,7 @@ def process_batch(
     """
     res_data = []
 
-    for row_number, *args in req_body['data']:
+    for row_number, *args in req_body_data:
         process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}
 
         try:
@@ -164,6 +164,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
+    req_body_data: List[List[Union[int, str]]] = req_body['data']
     start_time = timer()
 
     destination_driver = None
@@ -187,7 +188,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
 
             return get_response_for_batch(batch_id)
 
-    driver_kwargs = {
+    driver_kwargs: Dict[Text, Any] = {
         k.replace('sf-custom-', '').replace('-', '_'): v
         for k, v in headers.items()
         if k.startswith('sf-custom-')
@@ -197,7 +198,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         driver_kwargs,
         write_uri,
         batch_id,
-        req_body,
+        req_body_data,
         event['path'],
         destination_driver,
     )

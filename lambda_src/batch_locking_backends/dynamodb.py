@@ -14,7 +14,7 @@ In dynamodb, this will correspond to Items like:
 '''
 
 import os
-from typing import Dict, Text, List, Any, Tuple, Union
+from typing import Dict, Text, List, Any, Tuple, Union, Optional
 import boto3
 from json import dumps
 from hashlib import md5
@@ -36,12 +36,18 @@ else:
 
 
 def finish_batch_processing(
-    batch_id: Text,
-    response: ResponseType,
-    res_data: List[List[Union[int, Dict]]] = None,
+    batch_id: Text, response: ResponseType, res_data: List[List[Union[int, Dict]]]
 ):
     """
-    Write to the batch-locking table, a batch id, response and TTL
+    Write to the batch-locking table, a batch ID, response and TTL.
+
+    Args:
+        batch_id (Text): Batch ID for which the response is to be written.
+        response (ResponseType): Response to be written.
+        res_data (List[List[Union[int, Dict]]]): For calculating the no. of rows in the response.
+
+    Returns:
+        None
     """
 
     try:
@@ -92,37 +98,68 @@ def finish_batch_processing(
 
 def initialize_batch(batch_id: Text):
     """
-    Initialize an item in the batch-locking table with a null response
+    Initialize an item in the batch-locking table with a null response.
+
+    Args:
+        batch_id (Text): The batch ID for which an item will be initialized.
+
+    Returns:
+        None
     """
     table.put_item(Item={'batch_id': batch_id, 'locked': True, 'ttl': TTL})
 
 
-def _get_lock(batch_id: Text):
+def _get_lock(batch_id: Text) -> Optional[bool]:
     """
-    Retreive lock for a batch id
+    Retreive lock for a batch ID.
+
+    Args:
+        batch_id (Text): The batch ID for which the 'locked' key's value will be retrieved.
+
+    Returns:
+        Optional[bool]: Value of the locked key. None if absent.
     """
     item = table.get_item(Key={'batch_id': batch_id})
 
     return item['Item']['locked'] if 'Item' in item else None
 
 
-def is_batch_processing(batch_id: Text):
+def is_batch_processing(batch_id: Text) -> bool:
     """
-    Check if a batch id is being processed already, i.e is locked.
+    Check if a batch ID is being processed already, i.e is locked.
+
+    Args:
+        batch_id (Text): The batch ID to be checked.
+
+    Returns:
+        bool: Boolean representing if the batch is still being processed.
     """
     return _get_lock(batch_id) is True
 
 
-def is_batch_initialized(batch_id: Text):
+def is_batch_initialized(batch_id: Text) -> bool:
     """
-    Check if a batch id has been initialized in the batch-locking table.
+    Check if a batch ID has been initialized in the batch-locking table.
+
+    Args:
+        batch_id (Text): The batch ID to be checked.
+
+    Returns:
+        bool: Boolean representing if the batch has been initialized.
     """
     return _get_lock(batch_id) is not None
 
 
-def get_response_for_batch(batch_id: Text):
+def get_response_for_batch(batch_id: Text) -> Optional[ResponseType]:
     """
-    Retreive response for a batch id
+    Retreive response for a batch ID.
+
+    Args:
+        batch_id (Text): The batch ID for which the response is to be retrieved.
+
+    Returns:
+        Optional[ResponseType]: Dictionary representing the response for a batch ID. None if absent.
+
     """
     item = table.get_item(Key={'batch_id': batch_id})
 
