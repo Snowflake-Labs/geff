@@ -103,7 +103,7 @@ def process_batch(
     req_body_data: List[List[Union[int, str]]],
     event_path: Text,
     destination_driver: Optional[ModuleType],
-) -> List[List[Union[int, Dict]]]:
+) -> List[List[Union[int, Any]]]:
 
     """
     Processes a request and returns the result data.
@@ -113,7 +113,7 @@ def process_batch(
         destination_driver (Optional[ModuleType]): The destination driver such as S3.
 
     Returns:
-        List[List[Union[int, Dict]]]: Result data returned after the request is processed.
+        List[List[Union[int, Any]]]: Result data returned after the request is processed.
     """
     res_data = []
 
