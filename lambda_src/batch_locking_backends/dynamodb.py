@@ -3,14 +3,14 @@ This backend helps lock batches so that they are not processed twice when the AP
 
 Each batch has a lock that goes through three states:
 
-1.  Un-initialized batch has not yet been seen by GEFF and so a lock does not exist
-2.  Initialized batch is "processing" and has a "locked" lock while the call driver is running
-3.  Finished batch means a call driver has responded or timed out and the lock is "unlocked" and stores the response
+1. Un-initialized batch has not yet been seen by GEFF and so a lock does not exist
+2. Initialized batch is "processing" and has a "locked" lock while the call driver is running
+3. Finished batch means a call driver has responded or timed out and the lock is "unlocked" and stores the response
 
 In dynamodb, this will correspond to Items like:
-1.  No item
-2.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": true}
-3.  {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": false, "response": ...}
+1. No item
+2. {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": true}
+3. {"batch_id": "558c5ffb-08a7-4b15-aba7-b7f68edd567f", "locked": false, "response": ...}
 '''
 
 import os
