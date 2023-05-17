@@ -9,8 +9,9 @@ from re import match
 from time import time
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlparse
+from urllib.parse import parse_qsl, urlparse, urlencode
 from urllib.request import Request, urlopen
+
 
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
@@ -136,12 +137,12 @@ def process_row(
     req_results_path: str = results_path
     req_cursor: str = cursor
     req_method: str = method.upper()
-
     if json:
         req_data: Optional[bytes] = (
-            json if json.startswith('{') else dumps(parse_header_dict(json))
+            json
+            if (isinstance(json, str) or json.startswith('{}'))
+            else dumps(parse_header_dict(json))
         ).encode()
-        req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
 
