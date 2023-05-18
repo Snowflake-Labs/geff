@@ -9,7 +9,7 @@ from re import match
 from time import time
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlparse, urlencode
+from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -140,7 +140,7 @@ def process_row(
     if json:
         req_data: Optional[bytes] = (
             json
-            if (isinstance(json, str) or json.startswith('{}'))
+            if (isinstance(json, str) or json.startswith('{'))
             else dumps(parse_header_dict(json))
         ).encode()
     else:
