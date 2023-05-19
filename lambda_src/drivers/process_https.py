@@ -9,7 +9,7 @@ from re import match
 from time import time
 from typing import Any, Dict, List, Optional, Text, Union
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qsl, urlparse, urlencode
+from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 
