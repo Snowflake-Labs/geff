@@ -124,10 +124,10 @@ def process_row(
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
-            if json:
-                raise ValueError(f"auth 'body' key and json param are both present")
+            if data:
+                raise ValueError(f"auth 'body' key and data param are both present")
             else:
-                json = (
+                data = (
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
                     else dumps(req_auth['body'])
@@ -139,9 +139,7 @@ def process_row(
     req_method: str = method.upper()
     if json:
         req_data: Optional[bytes] = (
-            json
-            if (isinstance(json, str) or json.startswith('{}'))
-            else dumps(parse_header_dict(json))
+            json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
     else:
         req_data = None if data is None else data.encode()
