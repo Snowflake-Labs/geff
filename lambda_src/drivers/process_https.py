@@ -143,6 +143,7 @@ def process_row(
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
         ).encode()
+        req_headers['Content-Type'] = 'application/json'
     else:
         req_data = None if data is None else data.encode()
 
