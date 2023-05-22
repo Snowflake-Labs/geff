@@ -124,6 +124,8 @@ def process_row(
         elif 'headers' in req_auth:
             req_headers.update(req_auth['headers'])
         elif 'body' in req_auth:
+            if json:
+                raise ValueError(f"auth 'body' key and json param are both present")
             if data:
                 raise ValueError(f"auth 'body' key and data param are both present")
             else:
