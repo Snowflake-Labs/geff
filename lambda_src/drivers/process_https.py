@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
+
 from ..utils import LOG, parse_header_links, pick
 from ..vault import decrypt_if_encrypted
 
@@ -125,8 +126,10 @@ def process_row(
         elif 'body' in req_auth:
             if json:
                 raise ValueError(f"auth 'body' key and json param are both present")
+            if data:
+                raise ValueError(f"auth 'body' key and data param are both present")
             else:
-                json = (
+                data = (
                     req_auth['body']
                     if isinstance(req_auth['body'], str)
                     else dumps(req_auth['body'])
@@ -136,7 +139,6 @@ def process_row(
     req_results_path: str = results_path
     req_cursor: str = cursor
     req_method: str = method.upper()
-
     if json:
         req_data: Optional[bytes] = (
             json if json.startswith('{') else dumps(parse_header_dict(json))
