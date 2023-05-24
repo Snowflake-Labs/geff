@@ -6,6 +6,8 @@ The Generic External Function Framework (GEFF) is a generic backend for [Snowfla
 
 GEFF empowers users to invoke a variety of external RPC's without changing infrastructure, managing and modeling those RPC interfaces in Snowflake's Data Cloud, using Snowflake RBAC, and a single standaredized interaction with CSP's.
 
+To use GEFF you could build it as an image on AWS ECR(by invoking the bash script as mentioned below), use it a code base on AWS lambda(initialised by the instruction in the setup section) or create a zip archive of the code using the make command. 
+
 ## Example
 
 After deploying GEFF behind an [API Integration](https://docs.snowflake.com/en/sql-reference/sql/create-api-integration.html), you can create external functions that specify a protocol and an authenticated endpoint, e.g. —
