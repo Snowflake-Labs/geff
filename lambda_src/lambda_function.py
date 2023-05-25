@@ -100,7 +100,7 @@ def process_batch(
     driver_kwargs: Dict[Text, Any],
     write_uri: Text,
     batch_id: Text,
-    req_body_data: List[List[Union[int, str]]],
+    req_body_data: List[List[Any]],
     event_path: Text,
     destination_driver: Optional[ModuleType],
 ) -> List[List[Union[int, Any]]]:
@@ -164,7 +164,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
     LOG.debug('Destination header not found in a POST and hence using sync_flow().')
     headers = event['headers']
     req_body = loads(event['body'])
-    req_body_data: List[List[Union[int, str]]] = req_body['data']
+    req_body_data: List[List[Any]] = req_body['data']
     start_time = timer()
 
     destination_driver = None
