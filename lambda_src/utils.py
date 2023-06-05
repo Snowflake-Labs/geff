@@ -5,13 +5,27 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text
+from typing import Any, Dict, Optional, Text, TypedDict
+
 
 import boto3
 
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
+
+
+class ResponseType(TypedDict, total=False):
+    """
+    Type constructor for responses to be returned
+    """
+
+    statusCode: int
+    body: Text
+    isBase64Encoded: bool
+    headers: Dict[Text, Any]
+    response: Dict[Text, Any]
+    uri: str
 
 
 def pick(path: str, d: dict):
@@ -79,7 +93,7 @@ def format(s, ps):
     return ps[int(m.group(1))] if m else replace_refs(s, ps)
 
 
-def create_response(code: int, msg: Text) -> Dict[Text, Any]:
+def create_response(code: int, msg: Text) -> ResponseType:
     return {'statusCode': code, 'body': msg}
 
 
