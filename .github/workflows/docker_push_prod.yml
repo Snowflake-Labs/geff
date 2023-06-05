@@ -1,9 +1,8 @@
 name: deploy-to-prod
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [created]
 
 env:
   IMAGE_NAME: geff
