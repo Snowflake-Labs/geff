@@ -2,7 +2,7 @@ name: deploy-to-dev
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 env:
   IMAGE_NAME: geff
