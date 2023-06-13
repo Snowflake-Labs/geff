@@ -14,7 +14,7 @@ In dynamodb, this will correspond to Items like:
 '''
 
 import os
-from typing import Dict, Text, List, Any, Tuple, Union, Optional
+from typing import Dict, Text, List, Union, Optional
 import boto3
 from json import dumps
 from hashlib import md5
@@ -25,11 +25,13 @@ from ..utils import LOG, ResponseType
 AWS_REGION = os.environ.get(
     'AWS_REGION', 'us-west-2'
 )  # Placeholder while in dev TODO: change as variable/header
-DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE_NAME')
-TTL = os.environ.get('DYNAMODB_TABLE_TTL', 86400)
+BATCH_LOCKING_TABLE = os.environ.get('BATCH_LOCKING_TABLE_NAME')
+TTL = os.environ.get('BATCH_LOCKING_TABLE_TTL', 86400)
 
-if DYNAMODB_TABLE:
-    table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(DYNAMODB_TABLE)
+if BATCH_LOCKING_TABLE:
+    table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(
+        BATCH_LOCKING_TABLE
+    )
     BATCH_LOCKING_ENABLED = True
 else:
     BATCH_LOCKING_ENABLED = False

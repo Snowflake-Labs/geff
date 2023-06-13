@@ -5,12 +5,11 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Optional, List, Tuple, Union
+from typing import Any, Dict, Text, Optional, List, Union
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
 
-from botocore.exceptions import ClientError
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
 from .batch_locking_backends.dynamodb import (
@@ -20,6 +19,11 @@ from .batch_locking_backends.dynamodb import (
     get_response_for_batch,
     finish_batch_processing,
     BATCH_LOCKING_ENABLED,
+)
+from .rate_limiting_backends.dynamodb import (
+    get_hit_count,
+    increment_count,
+    RATE_LIMITING_ENABLED,
 )
 
 LAMBDA_RESPONSE_MAX_BYTES = 6_291_556
@@ -129,8 +133,26 @@ def process_batch(
             ).process_row  # type: ignore
 
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
-            row_result = process_row(*path, **process_row_params)
-            LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
+
+            url = process_row_params.get("url")
+            rate_limit = process_row_params.get("rate_limit")
+
+            if RATE_LIMITING_ENABLED and rate_limit:
+                if get_hit_count(url) < rate_limit:
+                    row_result = process_row(*path, **process_row_params)
+                    increment_count(url)
+                else:
+                    row_result = [
+                        {
+                            'error': (
+                                '429. Rate limit exceeded. Please slow down your requests.'
+                            )
+                        }
+                    ]
+            else:
+                row_result = process_row(*path, **process_row_params)
+
+            LOG.debug(f'Got row_result for URL: {url}.')
 
             if write_uri:
                 # Write s3 data and return confirmation
