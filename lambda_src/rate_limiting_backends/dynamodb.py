@@ -2,8 +2,6 @@ import os
 from typing import Text
 import boto3
 
-from ..utils import ResponseType
-
 AWS_REGION = os.environ.get(
     'AWS_REGION', 'us-west-2'
 )  # Placeholder while in dev TODO: change as variable/header
@@ -16,8 +14,6 @@ if RATE_LIMITING_TABLE:
         RATE_LIMITING_TABLE
     )
     RATE_LIMITING_ENABLED = True
-
-RATE_LIMIT = 10
 
 
 def get_hit_count(url: Text) -> int:

@@ -135,7 +135,7 @@ def process_batch(
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
 
             url = process_row_params.get("url")
-            rate_limit = process_row_params.get("rate_limit")
+            rate_limit = int(process_row_params.get("rate-limit"))
 
             if RATE_LIMITING_ENABLED and rate_limit:
                 if get_hit_count(url) < rate_limit:
