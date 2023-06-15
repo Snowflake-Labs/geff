@@ -135,12 +135,13 @@ def process_batch(
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
 
             url = process_row_params.get("url")
+            base_url = process_row_params.get("base_url")
             rate_limit = int(process_row_params.pop("rate_limit", 0))
 
-            if RATE_LIMITING_ENABLED and rate_limit:
-                if get_hit_count(url) < rate_limit:
+            if RATE_LIMITING_ENABLED and rate_limit and base_url:
+                if get_hit_count(base_url) < rate_limit:
                     row_result = process_row(*path, **process_row_params)
-                    increment_count(url)
+                    increment_count(base_url)
                 else:
                     row_result = [
                         {
