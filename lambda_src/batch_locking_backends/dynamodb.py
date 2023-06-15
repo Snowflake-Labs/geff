@@ -28,13 +28,12 @@ AWS_REGION = os.environ.get(
 BATCH_LOCKING_TABLE = os.environ.get('BATCH_LOCKING_TABLE_NAME')
 TTL = os.environ.get('BATCH_LOCKING_TABLE_TTL', 86400)
 
+BATCH_LOCKING_ENABLED = False
 if BATCH_LOCKING_TABLE:
     table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(
         BATCH_LOCKING_TABLE
     )
     BATCH_LOCKING_ENABLED = True
-else:
-    BATCH_LOCKING_ENABLED = False
 
 
 def finish_batch_processing(
