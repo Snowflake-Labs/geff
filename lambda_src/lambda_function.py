@@ -9,6 +9,7 @@ from typing import Any, Dict, Text, Optional, List, Union
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
+import time
 
 from .log import format_trace
 from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
@@ -23,6 +24,7 @@ from .batch_locking_backends.dynamodb import (
 from .rate_limiting_backends.dynamodb import (
     get_hit_count,
     increment_count,
+    initialize_url,
     RATE_LIMITING_ENABLED,
 )
 
@@ -137,9 +139,15 @@ def process_batch(
             url = process_row_params.get("url")
             base_url = process_row_params.get("base_url")
             rate_limit = int(process_row_params.pop("rate_limit", 0))
+            rate_limit_window = int(process_row_params.pop("rate_limit_window", 60))
 
             if RATE_LIMITING_ENABLED and rate_limit and base_url:
-                if get_hit_count(base_url) < rate_limit:
+
+                hit_count, expiry = get_hit_count(base_url, rate_limit_window)
+
+                if int(time.time()) > expiry:
+                    initialize_url(base_url, rate_limit_window)
+                elif hit_count < rate_limit:
                     row_result = process_row(*path, **process_row_params)
                     increment_count(base_url)
                 else:

@@ -1,6 +1,8 @@
 import os
-from typing import Text
+from typing import Text, Tuple, Optional
 import boto3
+import time
+
 
 AWS_REGION = os.environ.get(
     'AWS_REGION', 'us-west-2'
@@ -16,7 +18,7 @@ if RATE_LIMITING_TABLE:
     RATE_LIMITING_ENABLED = True
 
 
-def get_hit_count(url: Text) -> int:
+def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, Optional[int]]:
     """
     Retreive count for a url.
 
@@ -28,13 +30,13 @@ def get_hit_count(url: Text) -> int:
     """
     item = table.get_item(Key={'url': url})
     if 'Item' in item:
-        return item['Item']['hit_count']
+        return item['Item']['hit_count'], item['Item'].get('expiry')
     else:
-        _initialize_url(url)
-        return 0
+        initialize_url(url, initialize_url)
+        return 1, int(time.time())
 
 
-def _initialize_url(url: Text):
+def initialize_url(url: Text, rate_limit_window: int):
     """
     Initialize an item in the rate-limiting table.
 
@@ -44,7 +46,14 @@ def _initialize_url(url: Text):
     Returns:
         None
     """
-    table.put_item(Item={'url': url, 'hit_count': 0, 'ttl': TTL})
+    table.put_item(
+        Item={
+            'url': url,
+            'hit_count': 1,
+            'ttl': TTL,
+            'expiry': int(time.time()) + rate_limit_window * 60,
+        }
+    )
 
 
 def increment_count(url):
