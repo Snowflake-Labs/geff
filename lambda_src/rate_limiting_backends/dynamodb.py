@@ -30,10 +30,11 @@ def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, Optional[int]
     """
     item = table.get_item(Key={'url': url})
     if 'Item' in item:
-        return item['Item']['hit_count'], item['Item'].get('expiry')
+        return item['Item']['hit_count'], item['Item']['expiry']
     else:
-        initialize_url(url, initialize_url)
-        return 1, int(time.time())
+        initialize_url(url, rate_limit_window)
+        item = table.get_item(Key={'url': url})
+        return item['Item']['hit_count'], item['Item']['expiry']
 
 
 def initialize_url(url: Text, rate_limit_window: int):
