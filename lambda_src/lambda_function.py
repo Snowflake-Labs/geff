@@ -147,6 +147,7 @@ def process_batch(
 
                 if int(time.time()) > expiry:
                     initialize_url(base_url, rate_limit_window)
+                    row_result = process_row(*path, **process_row_params)
                 elif hit_count < rate_limit:
                     row_result = process_row(*path, **process_row_params)
                     increment_count(base_url)
