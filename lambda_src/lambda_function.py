@@ -122,6 +122,9 @@ def process_batch(
         List[List[Union[int, Any]]]: Result data returned after the request is processed.
     """
     res_data = []
+    RATE_LIMIT_ERROR = [
+        {'error': ('429. Rate limit exceeded. Please slow down your requests.')}
+    ]
 
     for row_number, *args in req_body_data:
         process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}
@@ -152,19 +155,13 @@ def process_batch(
                     row_result = process_row(*path, **process_row_params)
                     increment_count(base_url)
                 else:
-                    row_result = [
-                        {
-                            'error': (
-                                '429. Rate limit exceeded. Please slow down your requests.'
-                            )
-                        }
-                    ]
+                    row_result = RATE_LIMIT_ERROR
             else:
                 row_result = process_row(*path, **process_row_params)
 
             LOG.debug(f'Got row_result for URL: {url}.')
 
-            if write_uri:
+            if write_uri and row_result != RATE_LIMIT_ERROR:
                 # Write s3 data and return confirmation
                 row_result = destination_driver.write(  # type: ignore
                     write_uri, batch_id, row_result, row_number
