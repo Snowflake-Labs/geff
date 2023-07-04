@@ -74,7 +74,5 @@ def increment_count(url):
     table.update_item(
         Key={'url': url},
         UpdateExpression='SET hit_count = hit_count + :inc',
-        ConditionExpression='hit_count = :current',
         ExpressionAttributeValues={':inc': 1},
-        ReturnValues='UPDATED_NEW',
     )
