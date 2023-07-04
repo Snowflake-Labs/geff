@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Text, Tuple, Optional
+from typing import Text, Tuple
 
 import boto3
 
