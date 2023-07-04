@@ -1,8 +1,8 @@
 import os
-from typing import Text, Tuple, Optional
-import boto3
 import time
+from typing import Text, Tuple, Optional
 
+import boto3
 
 AWS_REGION = os.environ.get(
     'AWS_REGION', 'us-west-2'
@@ -18,12 +18,14 @@ if RATE_LIMITING_TABLE:
     RATE_LIMITING_ENABLED = True
 
 
-def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, Optional[int]]:
+def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, int]:
     """
-    Retreive count for a url.
+    Retreive hit count for a url.
 
     Args:
-        batch_id (Text): The batch ID for which the 'locked' key's value will be retrieved.
+        url (Text): The url to which the rate limit will apply.
+        rate_limit_window (int): Time window for how long the rate
+                    limit is valid after the initial request.
 
     Returns:
         Optional[bool]: Value of the locked key. None if absent.
@@ -42,7 +44,9 @@ def initialize_url(url: Text, rate_limit_window: int):
     Initialize an item in the rate-limiting table.
 
     Args:
-        batch_id (Text): The batch ID for which an item will be initialized.
+        url (Text):  The url to which the rate limit will apply.
+        rate_limit_window (int): Time window for how long the rate
+                    limit is valid after the initial request.
 
     Returns:
         None
@@ -58,9 +62,19 @@ def initialize_url(url: Text, rate_limit_window: int):
 
 
 def increment_count(url):
+    """
+    Increment hit count for a URL. 1 per every request.
+
+    Args:
+        url (Text):  The URL for which the count will be incremented.
+
+    Returns:
+        None
+    """
     table.update_item(
         Key={'url': url},
         UpdateExpression='SET hit_count = hit_count + :inc',
+        ConditionExpression='hit_count = :current',
         ExpressionAttributeValues={':inc': 1},
         ReturnValues='UPDATED_NEW',
     )
