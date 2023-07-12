@@ -223,6 +223,9 @@ def process_row(
                 'reason': str(e.reason),
                 'host': req_host,
             }
+            LOG.debug(
+                f"URLError: {str(e.reason)}, reason: {e.reason}, host: {req_host}"
+            )
         except JSONDecodeError as e:
             result = {
                 'error': 'JSONDecodeError' if raw_response else 'No Content',
