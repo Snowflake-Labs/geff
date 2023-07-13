@@ -141,7 +141,7 @@ def process_row(
 
     LOG.debug('Starting pagination.')
     while next_url:
-        LOG.info('next_url is %s.', next_url)
+        LOG.info('next_url is "%s".', next_url)
         req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
         links_headers = None
 

@@ -233,10 +233,10 @@ def lambda_handler(event: Any, context: Any) -> Dict[Text, Any]:
     headers = event['headers']
 
     destination = headers.get(DESTINATION_URI_HEADER)
-    LOG.info('Request destination: %s.', destination)
+    LOG.info('Request destination: "%s".', destination)
 
     batch_id = headers.get(BATCH_ID_HEADER)
-    LOG.info('Request batch-id: %s.', batch_id)
+    LOG.info('Request batch-id: "%s".', batch_id)
 
     # httpMethod doesn't exist implies caller is base lambda.
     # This is required to break an infinite loop of child lambda creation.
