@@ -74,11 +74,27 @@ def chunker(records: List[Any], chunk_size: int) -> Generator[List[Any], None, N
 
 
 def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any]:
-    return S3_CLIENT.put_object(
-        Bucket=bucket,
-        Body=content,
-        Key=filename,
-    )
+    try:
+        response = S3_CLIENT.put_object(
+            Bucket=bucket,
+            Body=content,
+            Key=filename,
+        )
+        LOG.info(
+            'Successfully wrote to S3. Bucket: "%s", filename: "%s"', bucket, filename
+        )
+        return response
+    except ClientError as ce:
+        error_message = ce.response['Error']['Message']
+        error_code = ce.response['Error']['Code']
+        LOG.info(
+            'Failed to write to S3. Bucket: "%s", filename: "%s", error: "%s", error code: "%s"',
+            bucket,
+            filename,
+            error_message,
+            error_code,
+        )
+        raise ce
 
 
 def initialize(destination: Text, batch_id: Text):
@@ -166,11 +182,20 @@ def check_status(destination: Text, batch_id: Text) -> Optional[Text]:
         content = response_obj['Body']
         json_object = json.loads(content.read().decode('utf-8'))
     except ClientError as ce:
-        if ce.response['Error']['Code'] == 'NoSuchKey':
-            LOG.debug('No manifest file found returning None.')
+        error_message = ce.response['Error']['Message']
+        error_code = ce.response['Error']['Code']
+        if error_code == 'NoSuchKey':
+            LOG.info('No manifest file found returning None.')
             return None
+        else:
+            LOG.info(
+                'Failed to check status from S3. Bucket: "%s", filename: "%s", error: "%s", error Code: "%s"',
+                bucket,
+                prefixed_filename,
+                error_message,
+                error_code,
+            )
+            raise ce
     else:
-        LOG.debug(f'Manifest file found returning contents. {json_object}')
+        LOG.info(f'Manifest file found returning contents. {json_object}')
         return json.dumps({'data': json_object})
-
-    return None
