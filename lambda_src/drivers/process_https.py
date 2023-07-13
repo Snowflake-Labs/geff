@@ -200,6 +200,21 @@ def process_row(
             )
             result = pick(req_results_path, response)
         except HTTPError as e:
+            if e.code in [401, 403, 407]:
+                LOG.info(
+                    'Authentication failed while requesting URL "%s". Status code: "%s", reason: "%s"',
+                    next_url,
+                    e.code,
+                    e.reason,
+                )
+            else:
+                LOG.info(
+                    'HTTPError encountered while requesting URL "%s". Status code: "%s", reason: "%s"',
+                    next_url,
+                    e.code,
+                    e.reason,
+                )
+
             response_body = (
                 decompress(e.read())
                 if e.headers.get('Content-Encoding') == 'gzip'
@@ -223,8 +238,11 @@ def process_row(
                 'reason': str(e.reason),
                 'host': req_host,
             }
-            LOG.debug(
-                f"URLError: {str(e.reason)}, reason: {e.reason}, host: {req_host}"
+            LOG.info(
+                'URLError encountered while requesting "%s". Reason: "%s", host: "%s"',
+                next_url,
+                str(e.reason),
+                req_host,
             )
         except JSONDecodeError as e:
             result = {
