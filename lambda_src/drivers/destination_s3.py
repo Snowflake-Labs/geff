@@ -80,7 +80,7 @@ def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any
             Body=content,
             Key=filename,
         )
-        LOG.info(
+        LOG.debug(
             'Successfully wrote to S3. Bucket: "%s", filename: "%s"', bucket, filename
         )
         return response
