@@ -87,7 +87,7 @@ def write_to_s3(bucket: Text, filename: Text, content: AnyStr) -> Dict[Text, Any
     except ClientError as ce:
         error_message = ce.response['Error']['Message']
         error_code = ce.response['Error']['Code']
-        LOG.info(
+        LOG.error(
             'Failed to write to S3. Bucket: "%s", filename: "%s", error: "%s", error code: "%s"',
             bucket,
             filename,
@@ -188,7 +188,7 @@ def check_status(destination: Text, batch_id: Text) -> Optional[Text]:
             LOG.info('No manifest file found returning None.')
             return None
         else:
-            LOG.info(
+            LOG.error(
                 'Failed to check status from S3. Bucket: "%s", filename: "%s", error: "%s", error Code: "%s"',
                 bucket,
                 prefixed_filename,
