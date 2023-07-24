@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Text, Tuple
-
+from ..utils import LOG
 import boto3
 
 AWS_REGION = os.environ.get(
@@ -39,7 +39,7 @@ def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, int]:
         return item['Item']['hit_count'], item['Item']['expiry']
 
 
-def initialize_url(url: Text, rate_limit_window: int):
+def initialize_url(url: Text, rate_limit_window: int) -> Tuple[int, int]:
     """
     Initialize an item in the rate-limiting table.
 
@@ -49,30 +49,53 @@ def initialize_url(url: Text, rate_limit_window: int):
                     limit is valid after the initial request.
 
     Returns:
-        None
+        Tuple[int, int]: The initialized hit count and the expiry time.
     """
+    hit_count = 1
+    expiry = int(time.time()) + rate_limit_window * 60
+
     table.put_item(
         Item={
             'url': url,
-            'hit_count': 1,
+            'hit_count': hit_count,
             'ttl': TTL,
-            'expiry': int(time.time()) + rate_limit_window * 60,
+            'expiry': expiry,
         }
     )
 
 
-def increment_count(url):
+def increment_and_get_hit_count(
+    url: Text, rate_limit: int, rate_limit_window: int
+) -> Tuple[int, int]:
     """
-    Increment hit count for a URL. 1 per every request.
+    Increment hit count for a URL and retrieve the updated count.
 
     Args:
-        url (Text):  The URL for which the count will be incremented.
+        url (Text): The URL for which the count will be incremented and returned.
+        rate_limit (int): The maximum number of requests that should be made to a URL in a time window.
+        rate_limit_window (int): Time window for how long the rate limit is valid after the initial request.
 
     Returns:
-        None
+        Tuple[int, int]: The updated hit count and the expiry time.
     """
-    table.update_item(
-        Key={'url': url},
-        UpdateExpression='SET hit_count = hit_count + :inc',
-        ExpressionAttributeValues={':inc': 1},
-    )
+    try:
+        table.update_item(
+            Key={'url': url},
+            UpdateExpression='SET hit_count = hit_count + :inc',
+            ConditionExpression='hit_count < :limit',
+            ExpressionAttributeValues={':inc': 1, ':limit': rate_limit},
+            ReturnValues="UPDATED_NEW",
+        )
+
+    except boto3.exceptions.botocore.exceptions.ClientError as ce:
+        if ce.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            LOG.info(ce.response['Error']['Message'])
+
+        elif ce.response['Error']['Code'] == "ValidationException":
+            initialize_url(url, rate_limit_window)
+
+        else:
+            raise
+
+    item = table.get_item(Key={'url': url})
+    return item['Item']['hit_count'], item['Item']['expiry']

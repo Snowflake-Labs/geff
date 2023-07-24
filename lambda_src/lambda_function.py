@@ -22,9 +22,8 @@ from .batch_locking_backends.dynamodb import (
     BATCH_LOCKING_ENABLED,
 )
 from .rate_limiting_backends.dynamodb import (
-    get_hit_count,
-    increment_count,
     initialize_url,
+    increment_and_get_hit_count,
     RATE_LIMITING_ENABLED,
 )
 
@@ -145,15 +144,15 @@ def process_batch(
             rate_limit_window = int(process_row_params.pop("rate_limit_window", 60))
 
             if RATE_LIMITING_ENABLED and rate_limit and base_url:
-
-                hit_count, expiry = get_hit_count(base_url, rate_limit_window)
+                hit_count, expiry = increment_and_get_hit_count(
+                    base_url, rate_limit, rate_limit_window
+                )
 
                 if int(time.time()) > expiry:
                     initialize_url(base_url, rate_limit_window)
                     row_result = process_row(*path, **process_row_params)
                 elif hit_count < rate_limit:
                     row_result = process_row(*path, **process_row_params)
-                    increment_count(base_url)
                 else:
                     row_result = RATE_LIMIT_ERROR
             else:
