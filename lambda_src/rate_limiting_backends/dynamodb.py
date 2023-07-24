@@ -39,7 +39,7 @@ def get_hit_count(url: Text, rate_limit_window: int) -> Tuple[int, int]:
         return item['Item']['hit_count'], item['Item']['expiry']
 
 
-def initialize_url(url: Text, rate_limit_window: int) -> Tuple[int, int]:
+def initialize_url(url: Text, rate_limit_window: int):
     """
     Initialize an item in the rate-limiting table.
 
@@ -49,7 +49,7 @@ def initialize_url(url: Text, rate_limit_window: int) -> Tuple[int, int]:
                     limit is valid after the initial request.
 
     Returns:
-        Tuple[int, int]: The initialized hit count and the expiry time.
+        None
     """
     hit_count = 1
     expiry = int(time.time()) + rate_limit_window * 60
