@@ -123,7 +123,7 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
     return lambda_response
 
 
-def parse_rate_limit_and_window(rate_limit_str: str) -> Tuple[int, str]:
+def parse_rate_limit_and_window(rate_limit_str: str) -> Tuple[int, int]:
     """
     Parse the rate_limit_str to extract the rate limit value and unit.
 
@@ -134,9 +134,9 @@ def parse_rate_limit_and_window(rate_limit_str: str) -> Tuple[int, str]:
     """
     unit_conversion = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
-    rate_limit_value, rate_limit_window_unit = rate_limit_str.split("/")
+    rate_limit, rate_limit_window_unit = rate_limit_str.split("/")
 
-    rate_limit_value = int(rate_limit_value)
+    rate_limit_value = int(rate_limit)
     rate_limit_window_seconds = unit_conversion.get(rate_limit_window_unit, 1)
 
     return rate_limit_value, rate_limit_window_seconds

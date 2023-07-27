@@ -3,6 +3,7 @@ import time
 from typing import Text, Tuple
 from ..utils import LOG
 import boto3
+from botocore.exceptions import ClientError
 
 AWS_REGION = os.environ.get(
     'AWS_REGION', 'us-west-2'
@@ -18,7 +19,7 @@ if RATE_LIMITING_TABLE:
     RATE_LIMITING_ENABLED = True
 
 
-def reset_rate_limit(url: Text, rate_limit_window: int) -> Tuple[int, int]:
+def reset_rate_limit(url: Text, rate_limit_window: int):
     """
     Retreive hit count for a url.
 
@@ -80,7 +81,7 @@ def initialize_url(url: Text, rate_limit_window: int):
 
 def increment_and_get_hit_count(
     url: Text, rate_limit: int, rate_limit_window: int
-) -> Tuple[int, int, int]:
+) -> Tuple[int, int]:
     """
     Increment hit count for a URL and retrieve the updated count and window_start, window_end.
 
@@ -123,7 +124,7 @@ def increment_and_get_hit_count(
                     ':new_window_end': window_end,
                 },
             )
-        except boto3.exceptions.botocore.exceptions.ClientError as ce:
+        except ClientError as ce:
             if ce.response['Error']['Code'] == 'ConditionalCheckFailedException':
                 LOG.info('Rate limit for URL "%s" exceeded.', url)
             else:
