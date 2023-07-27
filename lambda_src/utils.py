@@ -5,7 +5,7 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text, TypedDict
+from typing import Any, Dict, Optional, Text, TypedDict, Tuple
 
 
 import boto3
@@ -121,3 +121,22 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
+
+
+def parse_rate_limit_and_window(rate_limit_str: str) -> Tuple[int, int]:
+    """
+    Parse the rate_limit_str to extract the rate limit value and unit.
+
+    Args:
+        rate_limit_str (str): Rate limit string of the form "100/m" (100 requests per minute).
+    Returns:
+        Tuple[int, str]: The rate limit value and unit.
+    """
+    unit_conversion = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+    rate_limit, rate_limit_window_unit = rate_limit_str.split("/")
+
+    rate_limit_value = int(rate_limit)
+    rate_limit_window_seconds = unit_conversion.get(rate_limit_window_unit, 1)
+
+    return rate_limit_value, rate_limit_window_seconds
