@@ -12,7 +12,14 @@ from timeit import default_timer as timer
 import time
 
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
+from .utils import (
+    LOG,
+    create_response,
+    format,
+    invoke_process_lambda,
+    ResponseType,
+    parse_rate_limit_and_window,
+)
 from .batch_locking_backends.dynamodb import (
     initialize_batch,
     is_batch_initialized,
@@ -22,7 +29,7 @@ from .batch_locking_backends.dynamodb import (
     BATCH_LOCKING_ENABLED,
 )
 from .rate_limiting_backends.dynamodb import (
-    initialize_url,
+    reset_rate_limit,
     increment_and_get_hit_count,
     RATE_LIMITING_ENABLED,
 )
@@ -140,16 +147,17 @@ def process_batch(
 
             url = process_row_params.get("url")
             base_url = process_row_params.get("base_url")
-            rate_limit = int(process_row_params.pop("rate_limit", 0))
-            rate_limit_window = int(process_row_params.pop("rate_limit_window", 60))
+            rate_limit = process_row_params.pop("rate_limit")
 
             if RATE_LIMITING_ENABLED and rate_limit and base_url:
-                hit_count, expiry = increment_and_get_hit_count(
+                rate_limit, rate_limit_window = parse_rate_limit_and_window(rate_limit)
+
+                hit_count, window_end = increment_and_get_hit_count(
                     base_url, rate_limit, rate_limit_window
                 )
 
-                if int(time.time()) > expiry:
-                    initialize_url(base_url, rate_limit_window)
+                if int(time.time()) > window_end:
+                    reset_rate_limit(base_url, rate_limit_window)
                     row_result = process_row(*path, **process_row_params)
                 elif hit_count < rate_limit:
                     row_result = process_row(*path, **process_row_params)
