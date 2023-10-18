@@ -40,7 +40,7 @@ def process_row(
     json: Optional[Text] = None,
     method: Text = 'get',
     headers: Text = '',
-    auth: Text = None,
+    auth: Optional[Text] = None,
     params: Text = '',
     verbose: bool = False,
     cursor: Text = '',
@@ -197,6 +197,9 @@ def process_row(
                 else response_body
             )
             result = pick(req_results_path, response)
+            if destination_metadata:
+                metadata = pick(destination_metadata, response)
+
         except HTTPError as e:
             response_body = (
                 decompress(e.read())
@@ -231,9 +234,6 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
-            if destination_metadata:
-                metadata = metadata or []
-                metadata.append(pick(destination_metadata, result))
 
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
@@ -254,9 +254,6 @@ def process_row(
             )
         elif links_headers and isinstance(result, list):
             row_data += result
-            if destination_metadata:
-                metadata = metadata or []
-                metadata.append(pick(destination_metadata, result))
             link_dict: Dict[Any, Any] = next(
                 (l for l in links_headers if l['rel'] == 'next'), {}
             )

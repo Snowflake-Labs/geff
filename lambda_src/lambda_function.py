@@ -12,7 +12,7 @@ from timeit import default_timer as timer
 
 from botocore.exceptions import ClientError
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
+from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType, DataMetadata
 from .batch_locking_backends.dynamodb import (
     initialize_batch,
     is_batch_initialized,
