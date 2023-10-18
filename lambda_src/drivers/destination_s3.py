@@ -135,6 +135,7 @@ def finalize(
     destination: Text,
     batch_id: Text,
     datum: Dict,
+    metadata: Any,
 ) -> Dict[Text, Any]:
     bucket, _ = parse_destination_uri(destination)
     encoded_datum = json.dumps(datum)
@@ -148,6 +149,7 @@ def finalize(
             encoded_datum,
         ),
         'uri': s3_uri,
+        'metadata': metadata,
     }
 
 

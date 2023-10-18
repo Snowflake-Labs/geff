@@ -1,3 +1,4 @@
+from collections import namedtuple
 import json
 import logging
 import os
@@ -13,6 +14,9 @@ import boto3
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
+
+
+DataMetadata = namedtuple('DataMetadata', ['data', 'meta'])
 
 
 class ResponseType(TypedDict, total=False):

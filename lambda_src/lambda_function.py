@@ -194,7 +194,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         if k.startswith('sf-custom-')
     }
 
-    res_data = process_batch(
+    result = process_batch(
         driver_kwargs,
         write_uri,
         batch_id,
@@ -202,11 +202,12 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         event['path'],
         destination_driver,
     )
+    res_data, res_metadata = result if isinstance(result, DataMetadata) else (result, None)
 
     # Write data to s3 or return data synchronously
     if destination_driver:
         response = destination_driver.finalize(  # type: ignore
-            write_uri, batch_id, res_data
+            write_uri, batch_id, res_data, res_metadata
         )
     else:
         data_dumps = dumps({'data': res_data}, default=str)

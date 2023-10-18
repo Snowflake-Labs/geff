@@ -13,7 +13,7 @@ from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 
-from ..utils import LOG, parse_header_links, pick
+from ..utils import LOG, parse_header_links, pick, DataMetadata
 from ..vault import decrypt_if_encrypted
 
 
@@ -45,6 +45,7 @@ def process_row(
     verbose: bool = False,
     cursor: Text = '',
     results_path: Text = '',
+    destination_metadata: Text = '',
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
@@ -149,6 +150,7 @@ def process_row(
 
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
+    metadata: Optional[Any] = None
 
     LOG.debug('Starting pagination.')
     while next_url:
@@ -229,6 +231,9 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
+            if destination_metadata:
+                metadata = metadata or []
+                metadata.append(pick(destination_metadata, result))
 
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
@@ -249,6 +254,9 @@ def process_row(
             )
         elif links_headers and isinstance(result, list):
             row_data += result
+            if destination_metadata:
+                metadata = metadata or []
+                metadata.append(pick(destination_metadata, result))
             link_dict: Dict[Any, Any] = next(
                 (l for l in links_headers if l['rel'] == 'next'), {}
             )
@@ -256,7 +264,9 @@ def process_row(
             next_url = nu if nu != next_url else None
         else:
             row_data = result
+            if destination_metadata:
+                metadata = pick(destination_metadata, result)
             next_url = None
 
     LOG.debug(f'Returning row_data with count: {len(row_data)}')
-    return row_data
+    return row_data if metadata is None else DataMetadata(data, metadata)
