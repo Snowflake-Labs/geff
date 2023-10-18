@@ -261,8 +261,6 @@ def process_row(
             next_url = nu if nu != next_url else None
         else:
             row_data = result
-            if destination_metadata:
-                metadata = pick(destination_metadata, result)
             next_url = None
 
     LOG.debug(f'Returning row_data with count: {len(row_data)}')
