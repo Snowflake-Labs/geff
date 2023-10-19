@@ -146,7 +146,7 @@ def process_batch(
             if write_uri:
                 result = DataMetadata(
                     destination_driver.write(  # type: ignore
-                        write_uri, batch_id, result.data, row_number
+                        write_uri, batch_id, result, row_number
                     ),
                     result.metadata,
                 )

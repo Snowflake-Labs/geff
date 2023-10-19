@@ -9,7 +9,7 @@ from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG
+from ..utils import LOG, DataMetadata
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
@@ -95,24 +95,25 @@ def initialize(destination: Text, batch_id: Text):
 def write(
     destination: Text,
     batch_id: Text,
-    datum: Union[Dict, List, bytes],
+    result: Union[DataMetadata, Dict, List, bytes],
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    encoded_datum = (
-        datum
-        if isinstance(datum, bytes)
-        else ('\n'.join(json.dumps(d) for d in datum)).encode()
-        if isinstance(datum, list)
-        else json.dumps(datum, default=str).encode()
+    data = result.data if isinstance(result, DataMetadata) else result
+    encoded_data = (
+        data
+        if isinstance(data, bytes)
+        else ('\n'.join(json.dumps(d) for d in data)).encode()
+        if isinstance(data, list)
+        else json.dumps(data, default=str).encode()
     )
-    encoded_datum_hash = sha256(encoded_datum).hexdigest()
+    encoded_data_hash = sha256(encoded_data).hexdigest()
 
     prefixed_filename = (
         f'{prefix}{batch_id}_row_{row_index}.data.json'
         if prefix.endswith('/')
         else prefix.format(
-            hash=encoded_datum_hash,
+            hash=encoded_data_hash,
             batch_id=batch_id,
             row_index=row_index,
         )
@@ -124,10 +125,11 @@ def write(
         'response': write_to_s3(
             bucket,
             prefixed_filename,
-            encoded_datum,
+            encoded_data,
         ),
         'uri': s3_uri,
-        'sha256': encoded_datum_hash,
+        'sha256': encoded_data_hash,
+        'metadata': result.metadata if isinstance(result, DataMetadata) else None,
     }
 
 
@@ -135,7 +137,6 @@ def finalize(
     destination: Text,
     batch_id: Text,
     datum: Dict,
-    metadata: Any,
 ) -> Dict[Text, Any]:
     bucket, _ = parse_destination_uri(destination)
     encoded_datum = json.dumps(datum)
@@ -149,7 +150,6 @@ def finalize(
             encoded_datum,
         ),
         'uri': s3_uri,
-        'metadata': metadata,
     }
 
 
