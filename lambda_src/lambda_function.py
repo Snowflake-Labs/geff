@@ -148,7 +148,7 @@ def process_batch(
                     destination_driver.write(  # type: ignore
                         write_uri, batch_id, result.data, row_number
                     ),
-                    data.metadata,
+                    result.metadata,
                 )
 
         except Exception as e:
