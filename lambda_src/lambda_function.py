@@ -110,7 +110,7 @@ def process_batch(
     req_body_data: List[List[Any]],
     event_path: Text,
     destination_driver: Optional[ModuleType],
-) -> Union[DataMetadata, List[List[Union[int, Any]]]]:
+) -> List[List[Union[int, Any]]]:
     """
     Processes a request and returns the result data.
 
@@ -122,7 +122,6 @@ def process_batch(
         List[List[Union[int, Any]]]: Result data returned after the request is processed.
     """
     res_data = []
-    res_metadata = []
 
     for row_number, *args in req_body_data:
         process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}

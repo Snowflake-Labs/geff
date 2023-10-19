@@ -95,11 +95,11 @@ def initialize(destination: Text, batch_id: Text):
 def write(
     destination: Text,
     batch_id: Text,
-    result: Union[DataMetadata, Dict, List, bytes],
+    result: DataMetadata,
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    data = result.data if isinstance(result, DataMetadata) else result
+    data = result.data
     encoded_data = (
         data
         if isinstance(data, bytes)
@@ -107,13 +107,13 @@ def write(
         if isinstance(data, list)
         else json.dumps(data, default=str).encode()
     )
-    encoded_data_hash = sha256(encoded_data).hexdigest()
+    encoded_datum_hash = sha256(encoded_data).hexdigest()
 
     prefixed_filename = (
         f'{prefix}{batch_id}_row_{row_index}.data.json'
         if prefix.endswith('/')
         else prefix.format(
-            hash=encoded_data_hash,
+            hash=encoded_datum_hash,
             batch_id=batch_id,
             row_index=row_index,
         )
@@ -128,7 +128,7 @@ def write(
             encoded_data,
         ),
         'uri': s3_uri,
-        'sha256': encoded_data_hash,
+        'sha256': encoded_datum_hash,
         'metadata': result.metadata if isinstance(result, DataMetadata) else None,
     }
 
