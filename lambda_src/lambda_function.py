@@ -144,24 +144,16 @@ def process_batch(
 
             # Write s3 data and return confirmation
             if write_uri:
-                result = DataMetadata(
-                    destination_driver.write(  # type: ignore
-                        write_uri, batch_id, result, row_number
-                    ),
-                    result.metadata,
+                row_result = destination_driver.write(  # type: ignore
+                    write_uri, batch_id, result, row_number
                 )
 
         except Exception as e:
-            result = DataMetadata([{'error': repr(e), 'trace': format_trace(e)}], None)
+            row_result = [{'error': repr(e), 'trace': format_trace(e)}]
 
-        res_data.append([row_number, result.data])
-        res_metadata.append([row_number, result.metadata])
+        res_data.append([row_number, row_result])
 
-    return (
-        DataMetadata(res_data, res_metadata)
-        if any(r[1] for r in res_metadata)
-        else res_data
-    )
+    return res_data
 
 
 def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
@@ -208,16 +200,13 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         if k.startswith('sf-custom-')
     }
 
-    result = process_batch(
+    res_data = process_batch(
         driver_kwargs,
         write_uri,
         batch_id,
         req_body_data,
         event['path'],
         destination_driver,
-    )
-    res_data, res_metadata = (
-        result if isinstance(result, DataMetadata) else (result, None)
     )
 
     # Write data to s3 or return data synchronously
