@@ -152,7 +152,7 @@ def process_batch(
             )
 
         except Exception as e:
-            result_row = [{'error': repr(e), 'trace': format_trace(e)}]
+            result = DataMetadata([{'error': repr(e), 'trace': format_trace(e)}], None)
 
         res_data.append([row_number, result_row])
         res_metadata.append([row_number, result.metadata])
