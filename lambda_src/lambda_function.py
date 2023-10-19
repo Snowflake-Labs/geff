@@ -146,6 +146,8 @@ def process_batch(
                 row_result = destination_driver.write(  # type: ignore
                     write_uri, batch_id, result, row_number
                 )
+            else:
+                row_result = result.data
 
         except Exception as e:
             row_result = [{'error': repr(e), 'trace': format_trace(e)}]
