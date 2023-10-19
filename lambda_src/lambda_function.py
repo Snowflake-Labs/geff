@@ -5,14 +5,21 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Optional, List, Tuple, Union
+from typing import Any, Callable, Dict, Text, Optional, List, Tuple, Union
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
 
 from botocore.exceptions import ClientError
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType, DataMetadata
+from .utils import (
+    LOG,
+    create_response,
+    format,
+    invoke_process_lambda,
+    ResponseType,
+    DataMetadata,
+)
 from .batch_locking_backends.dynamodb import (
     initialize_batch,
     is_batch_initialized,
@@ -103,8 +110,7 @@ def process_batch(
     req_body_data: List[List[Any]],
     event_path: Text,
     destination_driver: Optional[ModuleType],
-) -> List[List[Union[int, Any]]]:
-
+) -> Union[DataMetadata, List[List[Union[int, Any]]]]:
     """
     Processes a request and returns the result data.
 
@@ -116,6 +122,7 @@ def process_batch(
         List[List[Union[int, Any]]]: Result data returned after the request is processed.
     """
     res_data = []
+    res_metadata = []
 
     for row_number, *args in req_body_data:
         process_row_params = {k: format(v, args) for k, v in driver_kwargs.items()}
@@ -129,25 +136,32 @@ def process_batch(
             ).process_row  # type: ignore
 
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
-            row_result = process_row(*path, **process_row_params)
-            LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
+            result = process_row(*path, **process_row_params)
+            LOG.debug(f'Got result for URL: {process_row_params.get("url")}.')
 
-            if write_uri:
-                # Write s3 data and return confirmation
-                row_result = destination_driver.write(  # type: ignore
-                    write_uri, batch_id, row_result, row_number
+            if not isinstance(result, DataMetadata):
+                result = DataMetadata(result, None)
+
+            # Write s3 data and return confirmation
+            result_row = (
+                destination_driver.write(  # type: ignore
+                    write_uri, batch_id, result.data, row_number
                 )
+                if write_uri
+                else result.data
+            )
 
         except Exception as e:
-            row_result = [{'error': repr(e), 'trace': format_trace(e)}]
+            result_row = [{'error': repr(e), 'trace': format_trace(e)}]
 
-        res_data.append(
-            [
-                row_number,
-                row_result,
-            ]
-        )
-    return res_data
+        res_data.append([row_number, result_row])
+        res_metadata.append([row_number, result.metadata])
+
+    return (
+        DataMetadata(res_data, res_metadata)
+        if any(r[1] for r in res_metadata)
+        else res_data
+    )
 
 
 def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
@@ -202,7 +216,9 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
         event['path'],
         destination_driver,
     )
-    res_data, res_metadata = result if isinstance(result, DataMetadata) else (result, None)
+    res_data, res_metadata = (
+        result if isinstance(result, DataMetadata) else (result, None)
+    )
 
     # Write data to s3 or return data synchronously
     if destination_driver:
