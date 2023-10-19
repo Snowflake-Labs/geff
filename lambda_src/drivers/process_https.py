@@ -264,4 +264,4 @@ def process_row(
             next_url = None
 
     LOG.debug(f'Returning row_data with count: {len(row_data)}')
-    return row_data if metadata is None else DataMetadata(data, metadata)
+    return row_data if metadata is None else DataMetadata(row_data, metadata)
