@@ -139,17 +139,17 @@ def process_batch(
             result = process_row(*path, **process_row_params)
             LOG.debug(f'Got result for URL: {process_row_params.get("url")}.')
 
-            if not isinstance(result, DataMetadata):
-                result = DataMetadata(result, None)
-
             # Write s3 data and return confirmation
-            result_row = (
+            result = (
                 destination_driver.write(  # type: ignore
                     write_uri, batch_id, result.data, row_number
                 )
                 if write_uri
                 else result.data
             )
+
+            if not isinstance(result, DataMetadata):
+                result = DataMetadata(result, None)
 
         except Exception as e:
             result = DataMetadata([{'error': repr(e), 'trace': format_trace(e)}], None)
