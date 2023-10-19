@@ -143,13 +143,13 @@ def process_batch(
                 result = DataMetadata(result, None)
 
             # Write s3 data and return confirmation
-            result = (
-                destination_driver.write(  # type: ignore
-                    write_uri, batch_id, result.data, row_number
+            if write_uri:
+                result = DataMetadata(
+                    destination_driver.write(  # type: ignore
+                        write_uri, batch_id, result.data, row_number
+                    ),
+                    data.metadata,
                 )
-                if write_uri
-                else result.data
-            )
 
         except Exception as e:
             result = DataMetadata([{'error': repr(e), 'trace': format_trace(e)}], None)
