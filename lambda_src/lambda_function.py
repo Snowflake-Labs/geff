@@ -223,7 +223,7 @@ def sync_flow(event: Any, context: Any = None) -> Optional[ResponseType]:
     # Write data to s3 or return data synchronously
     if destination_driver:
         response = destination_driver.finalize(  # type: ignore
-            write_uri, batch_id, res_data, res_metadata
+            write_uri, batch_id, res_data
         )
     else:
         data_dumps = dumps({'data': res_data}, default=str)
