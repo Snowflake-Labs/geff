@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
 
-DataMetadata = namedtuple('DataMetadata', ['data', 'meta'])
+DataMetadata = namedtuple('DataMetadata', ['data', 'metadata'])
 
 
 class ResponseType(TypedDict, total=False):
