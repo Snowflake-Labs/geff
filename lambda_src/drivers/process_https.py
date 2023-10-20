@@ -44,6 +44,7 @@ def process_row(
     params: Text = '',
     verbose: bool = False,
     cursor: Text = '',
+    page_limit: Optional[int] = None,
     results_path: Text = '',
     destination_metadata: Text = '',
 ):
@@ -139,6 +140,7 @@ def process_row(
     # query, nextpage_path, results_path
     req_results_path: str = results_path
     req_cursor: str = cursor
+    req_page_count: int = 0
     req_method: str = method.upper()
     if json:
         req_data: Optional[bytes] = (
@@ -234,6 +236,7 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
+            req_page_count += 1
 
             if ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
@@ -252,13 +255,22 @@ def process_row(
                 if cursor_value
                 else None
             )
+
+            if page_limit == req_page_count:
+                next_url = None
+
         elif links_headers and isinstance(result, list):
             row_data += result
+            req_page_count += 1
             link_dict: Dict[Any, Any] = next(
                 (l for l in links_headers if l['rel'] == 'next'), {}
             )
             nu: Optional[str] = link_dict.get('url')
             next_url = nu if nu != next_url else None
+
+            if page_limit == req_page_count:
+                next_url = None
+
         else:
             row_data = result
             next_url = None
