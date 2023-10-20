@@ -142,20 +142,17 @@ def cast_parameters(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
     casted_params = {}
 
     for name, param_type in type_hints.items():
-        if name in params:
-            origin = get_origin(param_type)
+        value = params.get(name)
 
-            if origin is Optional:
-                actual_type = get_args(param_type)[0]
-                if isinstance(actual_type, type):
-                    casted_params[name] = (
-                        None if params[name] is None else actual_type(params[name])
-                    )
-                else:
-                    casted_params[name] = params[name]
-            elif isinstance(param_type, type):
-                casted_params[name] = param_type(params[name])
-            else:
-                casted_params[name] = params[name]
+        if value is None:
+            continue
+
+        origin = get_origin(param_type)
+        args = get_args(param_type)
+
+        actual_type = args[0] if origin is Union else param_type
+
+        if isinstance(actual_type, type):
+            casted_params[name] = actual_type(value)
 
     return {**params, **casted_params}
