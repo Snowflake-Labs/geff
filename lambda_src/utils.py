@@ -18,6 +18,7 @@ from typing import (
     get_origin,
     get_args,
 )
+from urllib.parse import urlparse, urlunparse, urlencode
 
 
 import boto3
@@ -157,3 +158,23 @@ def cast_parameters(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
             casted_params[name] = actual_type(value)
 
     return {**params, **casted_params}
+
+
+def add_param_to_url(url, param_name, param_value):
+    parsed_url = urlparse(url)
+    query = parsed_url.query
+    query_dict = (
+        {k: v for k, v in (kv.split('=') for kv in query.split('&'))} if query else {}
+    )
+    query_dict[param_name] = param_value
+    new_query = urlencode(query_dict)
+    return urlunparse(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            parsed_url.path,
+            parsed_url.params,
+            new_query,
+            parsed_url.fragment,
+        )
+    )

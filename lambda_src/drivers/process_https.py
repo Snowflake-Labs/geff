@@ -13,7 +13,7 @@ from urllib.parse import parse_qsl, urlparse
 from urllib.request import Request, urlopen
 
 
-from ..utils import LOG, parse_header_links, pick, DataMetadata
+from ..utils import LOG, parse_header_links, pick, DataMetadata, add_param_to_url
 from ..vault import decrypt_if_encrypted
 
 
@@ -251,7 +251,7 @@ def process_row(
                 if cursor_value
                 and isinstance(cursor_value, str)
                 and cursor_value.startswith('https://')
-                else f'{req_url}&{cursor_param}={cursor_value}'
+                else add_param_to_url(req_url, cursor_param, cursor_value)
                 if cursor_value
                 else None
             )
