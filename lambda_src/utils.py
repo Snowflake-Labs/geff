@@ -6,7 +6,17 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text, TypedDict
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Text,
+    TypedDict,
+    get_type_hints,
+    get_origin,
+    get_args,
+)
 
 
 import boto3
@@ -125,3 +135,27 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
+
+
+def cast_parameters(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
+    type_hints = get_type_hints(func)
+    casted_params = {}
+
+    for name, param_type in type_hints.items():
+        if name in params:
+            origin = get_origin(param_type)
+
+            if origin is Optional:
+                actual_type = get_args(param_type)[0]
+                if isinstance(actual_type, type):
+                    casted_params[name] = (
+                        None if params[name] is None else actual_type(params[name])
+                    )
+                else:
+                    casted_params[name] = params[name]
+            elif isinstance(param_type, type):
+                casted_params[name] = param_type(params[name])
+            else:
+                casted_params[name] = params[name]
+
+    return {**params, **casted_params}

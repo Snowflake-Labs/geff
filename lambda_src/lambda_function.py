@@ -14,6 +14,7 @@ from botocore.exceptions import ClientError
 from .log import format_trace
 from .utils import (
     LOG,
+    cast_parameters,
     create_response,
     format,
     invoke_process_lambda,
@@ -135,14 +136,16 @@ def process_batch(
             ).process_row  # type: ignore
 
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
-            result = process_row(*path, **process_row_params)
+            result = process_row(
+                *path, **cast_parameters(process_row_params, process_row)
+            )
             LOG.debug(f'Got result for URL: {process_row_params.get("url")}.')
 
             if not isinstance(result, DataMetadata):
                 result = DataMetadata(result, None)
 
-            # Write s3 data and return confirmation
             if write_uri:
+                # Write data to destination and return manifest
                 row_result = destination_driver.write(  # type: ignore
                     write_uri, batch_id, result, row_number
                 )
