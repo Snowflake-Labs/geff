@@ -13,6 +13,7 @@ from typing import (
     Optional,
     Text,
     TypedDict,
+    Union,
     get_type_hints,
     get_origin,
     get_args,
