@@ -162,19 +162,19 @@ def cast_parameters(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
 
 def add_param_to_url(url, param_name, param_value):
     parsed_url = urlparse(url)
-    query = parsed_url.query
     query_dict = (
-        {k: v for k, v in (kv.split('=') for kv in query.split('&'))} if query else {}
+        {k: v for k, v in (kv.split('=') for kv in parsed_url.query.split('&'))}
+        if parsed_url.query
+        else {}
     )
     query_dict[param_name] = param_value
-    new_query = urlencode(query_dict)
     return urlunparse(
         (
             parsed_url.scheme,
             parsed_url.netloc,
             parsed_url.path,
             parsed_url.params,
-            new_query,
+            urlencode(query_dict),
             parsed_url.fragment,
         )
     )
