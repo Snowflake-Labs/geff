@@ -53,6 +53,18 @@ def pick(path: str, d: dict):
     return retval
 
 
+def set_value(d: Dict[Any, Any], path: str, value: Any) -> Dict[Any, Any]:
+    """
+    Set a value in a nested dictionary based on a dot-separated path.
+    Creates new dictionaries if the path does not exist.
+    """
+    keys = path.split('.')
+    for key in keys[:-1]:
+        d = d.setdefault(key, {})
+    d[keys[-1]] = value
+    return d
+
+
 # from https://requests.readthedocs.io/en/master/_modules/requests/utils/
 def parse_header_links(value):
     """Return a list of parsed link headers proxies.
