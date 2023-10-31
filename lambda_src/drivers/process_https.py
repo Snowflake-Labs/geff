@@ -268,7 +268,7 @@ def process_row(
                 else add_param_to_url(req_url, cursor_param, cursor_value)
                 if cursor_param and cursor_value
                 else next_url
-                if cursor_body and isinstance(req_json, dict)
+                if cursor_body and cursor_value and isinstance(req_json, dict)
                 else None
             )
             if cursor_body:

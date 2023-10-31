@@ -89,6 +89,30 @@ def test_process_row_pagination_cursor_json(mock_urlopen):
 
 
 @mock_urlopen_with_responses(
+    mock_response({'Content-Type': 'application/json'}, b'{"items": [4], "next": null}')
+)
+def test_process_row_pagination_cursor_json_null(mock_urlopen):
+    result = process_row(
+        base_url='https://api.eg.com',
+        url='/items',
+        page_limit=2,
+        cursor='{"path":"next", "body":"from"}',
+        results_path='items',
+        json='{}',
+    )
+
+    assert mock_urlopen.call_count == 1
+    assert result == [4]
+
+    assert_urlopen_made_requests(
+        mock_urlopen,
+        [
+            Request('https://api.eg.com/items', headers={}, data=b'{}'),
+        ],
+    )
+
+
+@mock_urlopen_with_responses(
     mock_response({'Content-Type': 'application/json'}, b'{"items": [4], "next": "1"}'),
     mock_response({'Content-Type': 'application/json'}, b'{"items": [2], "next": "2"}'),
 )
@@ -110,6 +134,32 @@ def test_process_row_pagination_cursor_string(mock_urlopen):
         [
             Request('https://api.eg.com/items', data=b'{"a": 1}'),
             Request('https://api.eg.com/items?p=1', data=b'{"a": 1}'),
+        ],
+    )
+
+
+@mock_urlopen_with_responses(
+    mock_response(
+        {'Content-Type': 'application/json'}, b'{"items": [4], "next": null}'
+    ),
+)
+def test_process_row_pagination_cursor_null(mock_urlopen):
+    result = process_row(
+        base_url='https://api.eg.com',
+        url='/items',
+        page_limit=2,
+        cursor='next:p',
+        results_path='items',
+        json='{"a":1}',
+    )
+
+    assert mock_urlopen.call_count == 1
+    assert result == [4]
+
+    assert_urlopen_made_requests(
+        mock_urlopen,
+        [
+            Request('https://api.eg.com/items', data=b'{"a": 1}'),
         ],
     )
 
