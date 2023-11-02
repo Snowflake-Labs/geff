@@ -44,13 +44,41 @@ class ResponseType(TypedDict, total=False):
     uri: str
 
 
-def pick(path: str, d: dict):
-    # path e.g. "a.b.c"
-    retval: Optional[Any] = d
-    for p in path.split('.'):
-        if p and retval:
-            retval = retval.get(p)
+def pick(pointer: str, data: dict):
+    tokens = []
+    temp_token = ''
+    in_quotes = False
+
+    for c in pointer:
+        if c == "'":
+            in_quotes = not in_quotes
+        elif c == '.' and not in_quotes:
+            tokens.append(temp_token)
+            temp_token = ''
+        else:
+            temp_token += c
+
+    tokens.append(temp_token)
+
+    pointer_parts = [
+        t for sub_token in tokens for t in re.split(r"[\[\]']", sub_token) if t
+    ]
+
+    retval = data
+    for p in pointer_parts:
+        try:
+            retval = retval[to_index_or_key(p)]
+        except (KeyError, IndexError, TypeError):
+            return None
+
     return retval
+
+
+def to_index_or_key(token: str) -> Union[int, str]:
+    try:
+        return int(token) if token.startswith('-') or token.isnumeric() else token
+    except ValueError:
+        return token
 
 
 def set_value(d: Dict[Any, Any], path: str, value: Any) -> Dict[Any, Any]:
