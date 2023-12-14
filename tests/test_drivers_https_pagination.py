@@ -1,32 +1,8 @@
-from pytest import fixture, mark
-from unittest.mock import patch, Mock, call
+from utils import mock_urlopen_with_responses, mock_response, mock_urlopen, Mock
 
-from email.message import EmailMessage
 from urllib.request import Request
 
 from lambda_src.drivers.process_https import process_row
-
-
-@fixture
-def mock_urlopen(request):
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_urlopen.side_effect = request.param
-        yield mock_urlopen
-
-
-def fixture_params(fixture, args):
-    return mark.parametrize(fixture, [args], indirect=True)
-
-
-def mock_response(headers: dict, body: bytes) -> Mock:
-    mock_response = Mock()
-    mock_response.read.return_value = body
-
-    mock_response.headers = EmailMessage()
-    for key, value in headers.items():
-        mock_response.headers[key] = value
-
-    return mock_response
 
 
 def assert_urlopen_made_requests(mock_urlopen: Mock, expected_requests: list):
@@ -50,13 +26,6 @@ def assert_urlopen_made_requests(mock_urlopen: Mock, expected_requests: list):
             actual_request.data == expected_request.data
         ), f"Mismatch in data for call {i+1}"
         # Add any other attribute checks you need
-
-
-def mock_urlopen_with_responses(*responses):
-    return lambda test: fixture_params(
-        "mock_urlopen",
-        responses,
-    )(test)
 
 
 @mock_urlopen_with_responses(
