@@ -13,9 +13,7 @@ from ..utils import LOG, DataMetadata
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
-AWS_REGION = os.environ[
-    'AWS_REGION'
-]  # Placeholder while in dev TODO: change as variable/header
+AWS_REGION = os.environ.get('AWS_REGION')
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
 MANIESTS_FOLDER_NAME = 'meta'
