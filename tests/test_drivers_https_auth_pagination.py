@@ -1,9 +1,8 @@
-from utils import mock_urlopen_with_responses, mock_response, mock_urlopen, Mock, patch
+from utils import mock_urlopen_with_responses, mock_response, mock_urlopen, Mock
 
 from urllib.request import Request
 
-from lambda_src.drivers import process_https, destination_s3
-from lambda_src.utils import DataMetadata
+from lambda_src.drivers import process_https
 
 
 def assert_urlopen_made_requests(mock_urlopen: Mock, expected_requests: list):
@@ -27,39 +26,46 @@ def assert_urlopen_made_requests(mock_urlopen: Mock, expected_requests: list):
             actual_request.data == expected_request.data
         ), f"Mismatch in data for call {i+1}"
         # Add any other attribute checks you need
+        assert (
+            actual_request.headers == expected_request.headers
+        ), f"Mismatch in headers for call {i+1}"
+        # Add any other attribute checks you need
 
 
 @mock_urlopen_with_responses(
     mock_response({'Content-Type': 'application/json'}, b'{"items": [4], "next": "1"}'),
-    mock_response(
-        {'Content-Type': 'application/json'}, b'{"items": [2], "next": "2", "md": 3}'
-    ),
+    mock_response({'Content-Type': 'application/json'}, b'{"items": [2]}'),
 )
-@patch('lambda_src.drivers.destination_s3.write_to_s3')
-def test_process_row_destination_metadata(mock_write_to_s3, mock_urlopen):
+def test_process_row_destination_metadata(mock_urlopen):
     result = process_https.process_row(
         base_url='https://api.eg.com',
-        url='/items',
-        page_limit=2,
-        cursor='{"path":"next", "body":"from"}',
+        url='/items?from=0',
+        cursor='next:from',
         results_path='items',
-        json='{}',
-        destination_metadata='md',
+        auth='{"host": "api.eg.com", "authorization": "{{query}}"}',
     )
 
     assert mock_urlopen.call_count == 2
-    assert result == DataMetadata([4, 2], 3)
+    assert result == [4, 2]
 
     assert_urlopen_made_requests(
         mock_urlopen,
         [
-            Request('https://api.eg.com/items', headers={}, data=b'{}'),
             Request(
-                'https://api.eg.com/items',
-                data=b'{"from": "1"}',
+                'https://api.eg.com/items?from=0',
+                headers={
+                    'authorization': 'from=0',
+                    'Accept-encoding': 'gzip',
+                    'User-agent': 'GEFF 1.0',
+                },
+            ),
+            Request(
+                'https://api.eg.com/items?from=1',
+                headers={
+                    'authorization': 'from=1',
+                    'Accept-encoding': 'gzip',
+                    'User-agent': 'GEFF 1.0',
+                },
             ),
         ],
     )
-
-    destination_s3.finalize('s3://foo/bar', 'batch-id-123', result)
-    assert mock_write_to_s3.call_count == 1
