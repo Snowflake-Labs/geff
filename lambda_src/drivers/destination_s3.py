@@ -9,13 +9,11 @@ from hashlib import sha256
 
 import boto3
 from botocore.exceptions import ClientError
-from ..utils import LOG
+from ..utils import LOG, DataMetadata
 
 SAMPLE_SIZE: int = 10
 MAX_JSON_FILE_SIZE: int = 15 * 1024 * 1024 * 1024
-AWS_REGION = os.environ[
-    'AWS_REGION'
-]  # Placeholder while in dev TODO: change as variable/header
+AWS_REGION = os.environ.get('AWS_REGION')
 S3_CLIENT = boto3.client('s3', region_name=AWS_REGION)
 MANIFEST_FILENAME = 'MANIFEST.json'
 MANIESTS_FOLDER_NAME = 'meta'
@@ -95,18 +93,19 @@ def initialize(destination: Text, batch_id: Text):
 def write(
     destination: Text,
     batch_id: Text,
-    datum: Union[Dict, List, bytes],
+    result: DataMetadata,
     row_index: int,
 ) -> Dict[Text, Any]:
     bucket, prefix = parse_destination_uri(destination)
-    encoded_datum = (
-        datum
-        if isinstance(datum, bytes)
-        else ('\n'.join(json.dumps(d) for d in datum)).encode()
-        if isinstance(datum, list)
-        else json.dumps(datum, default=str).encode()
+    data = result.data
+    encoded_data = (
+        data
+        if isinstance(data, bytes)
+        else ('\n'.join(json.dumps(d) for d in data)).encode()
+        if isinstance(data, list)
+        else json.dumps(data, default=str).encode()
     )
-    encoded_datum_hash = sha256(encoded_datum).hexdigest()
+    encoded_datum_hash = sha256(encoded_data).hexdigest()
 
     prefixed_filename = (
         f'{prefix}{batch_id}_row_{row_index}.data.json'
@@ -124,10 +123,11 @@ def write(
         'response': write_to_s3(
             bucket,
             prefixed_filename,
-            encoded_datum,
+            encoded_data,
         ),
         'uri': s3_uri,
         'sha256': encoded_datum_hash,
+        'metadata': result.metadata if isinstance(result, DataMetadata) else None,
     }
 
 

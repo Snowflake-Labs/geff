@@ -1,3 +1,4 @@
+from collections import namedtuple
 import json
 import logging
 import os
@@ -5,7 +6,19 @@ import re
 import sys
 from codecs import encode
 from json import dumps
-from typing import Any, Dict, Optional, Text, TypedDict
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Text,
+    TypedDict,
+    Union,
+    get_type_hints,
+    get_origin,
+    get_args,
+)
+from urllib.parse import urlparse, urlunparse, urlencode
 
 
 import boto3
@@ -13,6 +26,9 @@ import boto3
 logging.basicConfig(stream=sys.stdout)
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
+
+
+DataMetadata = namedtuple('DataMetadata', ['data', 'metadata'])
 
 
 class ResponseType(TypedDict, total=False):
@@ -28,13 +44,53 @@ class ResponseType(TypedDict, total=False):
     uri: str
 
 
-def pick(path: str, d: dict):
-    # path e.g. "a.b.c"
-    retval: Optional[Any] = d
-    for p in path.split('.'):
-        if p and retval:
-            retval = retval.get(p)
+def pick(pointer: str, data: dict):
+    tokens = []
+    temp_token = ''
+    in_quotes = False
+
+    for c in pointer:
+        if c == "'":
+            in_quotes = not in_quotes
+        elif c == '.' and not in_quotes:
+            tokens.append(temp_token)
+            temp_token = ''
+        else:
+            temp_token += c
+
+    tokens.append(temp_token)
+
+    pointer_parts = [
+        t for sub_token in tokens for t in re.split(r"[\[\]']", sub_token) if t
+    ]
+
+    retval = data
+    for p in pointer_parts:
+        try:
+            retval = retval[to_index_or_key(p)]
+        except (KeyError, IndexError, TypeError):
+            return None
+
     return retval
+
+
+def to_index_or_key(token: str) -> Union[int, str]:
+    try:
+        return int(token) if token.startswith('-') or token.isnumeric() else token
+    except ValueError:
+        return token
+
+
+def set_value(d: Dict[Any, Any], path: str, value: Any) -> Dict[Any, Any]:
+    """
+    Set a value in a nested dictionary based on a dot-separated path.
+    Creates new dictionaries if the path does not exist.
+    """
+    keys = path.split('.')
+    for key in keys[:-1]:
+        d = d.setdefault(key, {})
+    d[keys[-1]] = value
+    return d
 
 
 # from https://requests.readthedocs.io/en/master/_modules/requests/utils/
@@ -121,3 +177,44 @@ def invoke_process_lambda(event: Any, lambda_name: Text) -> Dict[Text, Any]:
 
     # Returns 202 on success if InvocationType = 'Event'
     return lambda_response
+
+
+def cast_parameters(params: Dict[str, Any], func: Callable) -> Dict[str, Any]:
+    type_hints = get_type_hints(func)
+    casted_params = {}
+
+    for name, param_type in type_hints.items():
+        value = params.get(name)
+
+        if value is None:
+            continue
+
+        origin = get_origin(param_type)
+        args = get_args(param_type)
+
+        actual_type = args[0] if origin is Union else param_type
+
+        if isinstance(actual_type, type):
+            casted_params[name] = actual_type(value)
+
+    return {**params, **casted_params}
+
+
+def add_param_to_url(url, param_name, param_value):
+    parsed_url = urlparse(url)
+    query_dict = (
+        {k: v for k, v in (kv.split('=') for kv in parsed_url.query.split('&'))}
+        if parsed_url.query
+        else {}
+    )
+    query_dict[param_name] = param_value
+    return urlunparse(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            parsed_url.path,
+            parsed_url.params,
+            urlencode(query_dict),
+            parsed_url.fragment,
+        )
+    )

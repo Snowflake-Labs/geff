@@ -5,14 +5,22 @@ from base64 import b64encode
 from gzip import compress
 from importlib import import_module
 from json import dumps, loads
-from typing import Any, Dict, Text, Optional, List, Tuple, Union
+from typing import Any, Callable, Dict, Text, Optional, List, Tuple, Union
 from types import ModuleType
 from urllib.parse import urlparse
 from timeit import default_timer as timer
 
 from botocore.exceptions import ClientError
 from .log import format_trace
-from .utils import LOG, create_response, format, invoke_process_lambda, ResponseType
+from .utils import (
+    LOG,
+    cast_parameters,
+    create_response,
+    format,
+    invoke_process_lambda,
+    ResponseType,
+    DataMetadata,
+)
 from .batch_locking_backends.dynamodb import (
     initialize_batch,
     is_batch_initialized,
@@ -104,7 +112,6 @@ def process_batch(
     event_path: Text,
     destination_driver: Optional[ModuleType],
 ) -> List[List[Union[int, Any]]]:
-
     """
     Processes a request and returns the result data.
 
@@ -129,24 +136,27 @@ def process_batch(
             ).process_row  # type: ignore
 
             LOG.debug(f'Invoking process_row for the driver {driver_module}.')
-            row_result = process_row(*path, **process_row_params)
-            LOG.debug(f'Got row_result for URL: {process_row_params.get("url")}.')
+            result = process_row(
+                *path, **cast_parameters(process_row_params, process_row)
+            )
+            LOG.debug(f'Got result for URL: {process_row_params.get("url")}.')
+
+            if not isinstance(result, DataMetadata):
+                result = DataMetadata(result, None)
 
             if write_uri:
-                # Write s3 data and return confirmation
+                # Write data to destination and return manifest
                 row_result = destination_driver.write(  # type: ignore
-                    write_uri, batch_id, row_result, row_number
+                    write_uri, batch_id, result, row_number
                 )
+            else:
+                row_result = result.data
 
         except Exception as e:
             row_result = [{'error': repr(e), 'trace': format_trace(e)}]
 
-        res_data.append(
-            [
-                row_number,
-                row_result,
-            ]
-        )
+        res_data.append([row_number, row_result])
+
     return res_data
 
 

@@ -7,13 +7,20 @@ from io import BytesIO
 from json import JSONDecodeError, dumps, loads
 from re import match
 from time import time
-from typing import Any, Dict, List, Optional, Text, Union
+from typing import Any, Dict, List, Optional, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
-from urllib.request import Request, urlopen
+from urllib import request
 
 
-from ..utils import LOG, parse_header_links, pick
+from ..utils import (
+    LOG,
+    parse_header_links,
+    set_value,
+    pick,
+    DataMetadata,
+    add_param_to_url,
+)
 from ..vault import decrypt_if_encrypted
 
 
@@ -34,20 +41,25 @@ def render_jinja_template(template, params, global_functions):
 
 
 def process_row(
-    data: Optional[Text] = None,
-    base_url: Text = '',
-    url: Text = '',
-    json: Optional[Text] = None,
-    method: Text = 'get',
-    headers: Text = '',
-    auth: Text = None,
-    params: Text = '',
+    base_url: str = '',
+    url: str = '',
+    data: Optional[str] = None,
+    json: Optional[str] = None,
+    method: str = 'get',
+    headers: str = '',
+    auth: Optional[str] = None,
+    params: str = '',
     verbose: bool = False,
-    cursor: Text = '',
-    results_path: Text = '',
+    cursor: str = '',
+    page_limit: Optional[int] = None,
+    results_path: str = '',
+    destination_metadata: str = '',
 ):
     if not base_url and not url:
         raise ValueError('Missing required parameter. Need one of url or base-url.')
+
+    if data and json:
+        raise ValueError('parameters data and json cannot both be present')
 
     req_url = url if url.startswith(base_url) else base_url + url
 
@@ -71,130 +83,140 @@ def process_row(
     req_headers.setdefault('User-Agent', 'GEFF 1.0')
     req_headers.setdefault('Accept-Encoding', 'gzip')
 
-    # We look for an auth header and if found, we parse it from its encoded format
-    if auth:
-        auth = render_jinja_template(
-            decrypt_if_encrypted(auth),
-            {
-                'path': parsed_url.path,
-                'query': parsed_url.query,
-                'method': method,
-                'unixtime': int(time()),
-            },
-            {
-                'time': time,
-                'hmac_sha256_base64': lambda secret_key, signature_string: (
-                    b64encode(
-                        new_hmac(
-                            secret_key.encode(),
-                            signature_string.encode(),
-                            sha256,
-                        ).digest()
-                    ).decode()
-                ),
-            },
-        )
-
-        req_auth = (
-            loads(auth)
-            if auth and auth.startswith('{')
-            else parse_header_dict(auth)
-            if auth
-            else {}
-        )
-        auth_host = req_auth.get('host')
-
-        # We reject the request if the 'auth' is present but doesn't match the pinned host.
-        if auth_host and req_host and auth_host != req_host:
-            raise ValueError(
-                "Requests can only be made to host provided in the auth header."
-            )
-        # If the URL is missing a hostname, use the host from the auth dictionary
-        elif auth_host and not req_host:
-            req_host = auth_host
-        # We make unauthenticated request if the 'host' key is missing.
-        elif not auth_host:
-            raise ValueError(f"'auth' missing the 'host' key.")
-        elif 'basic' in req_auth:
-            req_headers['Authorization'] = make_basic_header(req_auth['basic'])
-        elif 'bearer' in req_auth:
-            req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
-        elif 'authorization' in req_auth:
-            req_headers['authorization'] = req_auth['authorization']
-        elif 'headers' in req_auth:
-            req_headers.update(req_auth['headers'])
-        elif 'body' in req_auth:
-            if json:
-                raise ValueError(f"auth 'body' key and json param are both present")
-            if data:
-                raise ValueError(f"auth 'body' key and data param are both present")
-            else:
-                data = (
-                    req_auth['body']
-                    if isinstance(req_auth['body'], str)
-                    else dumps(req_auth['body'])
-                )
+    auth_template = decrypt_if_encrypted(auth) if auth else None
 
     # query, nextpage_path, results_path
     req_results_path: str = results_path
     req_cursor: str = cursor
+    req_page_count: int = 0
     req_method: str = method.upper()
     if json:
-        req_data: Optional[bytes] = (
-            json if json.startswith('{') else dumps(parse_header_dict(json))
-        ).encode()
+        req_json = loads(json) if json.startswith('{') else parse_header_dict(json)
         req_headers['Content-Type'] = 'application/json'
     else:
-        req_data = None if data is None else data.encode()
+        req_json = None
 
     next_url: Optional[str] = req_url
     row_data: List[Any] = []
+    metadata: Optional[Any] = None
 
     LOG.debug('Starting pagination.')
     while next_url:
-        LOG.debug(f'next_url is {next_url}.')
-        req = Request(next_url, method=req_method, headers=req_headers, data=req_data)
+        if auth:
+            parsed_url = urlparse(next_url)
+            auth = render_jinja_template(
+                auth_template,
+                {
+                    'path': parsed_url.path,
+                    'query': parsed_url.query,
+                    'method': method,
+                    'unixtime': int(time()),
+                },
+                {
+                    'time': time,
+                    'hmac_sha256_base64': lambda secret_key, signature_string: (
+                        b64encode(
+                            new_hmac(
+                                secret_key.encode(),
+                                signature_string.encode(),
+                                sha256,
+                            ).digest()
+                        ).decode()
+                    ),
+                },
+            )
+
+            req_auth = (
+                loads(auth)
+                if auth and auth.startswith('{')
+                else parse_header_dict(auth)
+                if auth
+                else {}
+            )
+            auth_host = req_auth.get('host')
+
+            # We reject the request if the 'auth' is present but doesn't match the pinned host.
+            if auth_host and req_host and auth_host != req_host:
+                raise ValueError(
+                    "Requests can only be made to host provided in the auth header."
+                )
+            # If the URL is missing a hostname, use the host from the auth dictionary
+            elif auth_host and not req_host:
+                req_host = auth_host
+            # We make unauthenticated request if the 'host' key is missing.
+            elif not auth_host:
+                raise ValueError(f"'auth' missing the 'host' key.")
+            elif 'basic' in req_auth:
+                req_headers['Authorization'] = make_basic_header(req_auth['basic'])
+            elif 'bearer' in req_auth:
+                req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
+            elif 'authorization' in req_auth:
+                req_headers['authorization'] = req_auth['authorization']
+            elif 'headers' in req_auth:
+                req_headers.update(req_auth['headers'])
+            elif 'body' in req_auth:
+                if json:
+                    raise ValueError(f"auth 'body' key and json param are both present")
+                if data:
+                    raise ValueError(f"auth 'body' key and data param are both present")
+                else:
+                    data = (
+                        req_auth['body']
+                        if isinstance(req_auth['body'], str)
+                        else dumps(req_auth['body'])
+                    )
+
+        LOG.debug(f'~> {req_method} {next_url}')
+        req = request.Request(
+            next_url,
+            method=req_method,
+            headers=req_headers,
+            data=(
+                data.encode()
+                if data is not None
+                else dumps(req_json).encode()
+                if req_json is not None
+                else None
+            ),
+        )
         links_headers = None
 
         try:
-            LOG.debug(f'Making request with {req}')
-            res = urlopen(req)
+            res = request.urlopen(req)
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )
-            response_headers = dict(res.getheaders())
+            res_headers = dict(res.headers.items())
             res_body = res.read()
-            LOG.debug(f'Got the response body with length: {len(res_body)}')
+            res_encoding = res_headers.get('Content-Encoding')
+            res_type = res_headers.get('Content-Type', '')
+            LOG.debug(f'<~ {len(res_body)} bytes [{res_type}] [{res_encoding}]')
 
-            raw_response = (
-                decompress(res_body)
-                if res.headers.get('Content-Encoding') == 'gzip'
-                else res_body
-            )
+            raw_response = decompress(res_body) if res_encoding == 'gzip' else res_body
             response_date = (
-                parsedate_to_datetime(response_headers['Date']).isoformat()
-                if 'Date' in response_headers
+                parsedate_to_datetime(res_headers['Date']).isoformat()
+                if 'Date' in res_headers
                 else None
             )
             response_body = (
                 loads(raw_response)
-                if response_headers.get('Content-Type', '').startswith(
-                    'application/json'
-                )
+                if res_type.startswith('application/json')
                 else BytesIO(raw_response).getbuffer().tobytes()
             )
-            LOG.debug('Extracted data from response.')
 
             response = (
                 {
                     'body': response_body,
-                    'headers': response_headers,
+                    'headers': res_headers,
                     'responded_at': response_date,
                 }
                 if verbose
                 else response_body
             )
             result = pick(req_results_path, response)
+            if destination_metadata:
+                metadata = pick(destination_metadata, response)
+
         except HTTPError as e:
             response_body = (
                 decompress(e.read())
@@ -229,8 +251,15 @@ def process_row(
 
         if req_cursor and isinstance(result, list):
             row_data += result
+            req_page_count += 1
 
-            if ':' in req_cursor:
+            cursor_body = None
+            if req_cursor.startswith('{'):
+                c = loads(req_cursor)
+                cursor_path = c.get('path')
+                cursor_body = c.get('body')
+                cursor_param = c.get('param')
+            elif ':' in req_cursor:
                 cursor_path, cursor_param = req_cursor.rsplit(':', 1)
             else:
                 cursor_path = req_cursor
@@ -243,20 +272,40 @@ def process_row(
                 if cursor_value
                 and isinstance(cursor_value, str)
                 and cursor_value.startswith('https://')
-                else f'{req_url}&{cursor_param}={cursor_value}'
-                if cursor_value
+                else add_param_to_url(req_url, cursor_param, cursor_value)
+                if cursor_param and cursor_value
+                else next_url
+                if cursor_body and cursor_value and isinstance(req_json, dict)
                 else None
             )
+            if cursor_body:
+                if isinstance(req_json, dict):
+                    set_value(req_json, cursor_body, cursor_value)
+                else:
+                    raise ValueError('cursor.body present without json param')
+
+            if page_limit == req_page_count:
+                next_url = None
+
         elif links_headers and isinstance(result, list):
             row_data += result
+            req_page_count += 1
             link_dict: Dict[Any, Any] = next(
                 (l for l in links_headers if l['rel'] == 'next'), {}
             )
             nu: Optional[str] = link_dict.get('url')
             next_url = nu if nu != next_url else None
+
+            if page_limit == req_page_count:
+                next_url = None
+
+        elif isinstance(result, list):
+            row_data += result
+            next_url = None
+
         else:
             row_data = result
             next_url = None
 
-    LOG.debug(f'Returning row_data with count: {len(row_data)}')
-    return row_data
+    LOG.debug(f'<- len(row_data)={len(row_data)}')
+    return row_data if metadata is None else DataMetadata(row_data, metadata)
