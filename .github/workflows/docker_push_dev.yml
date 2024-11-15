@@ -1,13 +1,12 @@
 name: deploy-to-dev
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 env:
   IMAGE_NAME: geff
-
+  
 jobs:
   container_builder:
     name: Builds and pushes the GEFF container image
