@@ -23,6 +23,7 @@ def decrypt_if_encrypted(
     if ct and (
         ct.startswith('arn:aws:secretsmanager:')
         or ct.startswith('arn:aws-us-gov:secretsmanager:')
+        or ct.startswith('arn:aws-cn:secretsmanager:')
     ):
         return secretsmanager.get_secret_value(SecretId=ct).get('SecretString')
 
