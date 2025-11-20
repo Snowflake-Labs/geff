@@ -1,9 +1,9 @@
-FROM public.ecr.aws/lambda/python:3.11
+FROM public.ecr.aws/lambda/python:3.14.2025.11.19.23
 
 # Install git and git clone the geff repo
-RUN yum update -y && \
-    yum install -y git && \
-    rm -Rf /var/cache/yum
+RUN dnf update -y && \
+    dnf install -y git && \
+    dnf clean all
 
 RUN mkdir "${LAMBDA_TASK_ROOT}/geff/"
 
