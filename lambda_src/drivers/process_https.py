@@ -24,6 +24,12 @@ from ..utils import (
 from ..vault import decrypt_if_encrypted
 
 
+DEFAULT_REQUEST_HEADERS = {
+    'User-Agent': 'GEFF 1.0',
+    'Accept-Encoding': 'gzip',
+}
+
+
 def make_basic_header(auth):
     return b'Basic ' + b64encode(auth.encode())
 
@@ -32,10 +38,39 @@ def parse_header_dict(value):
     return {k: v for k, v in parse_qsl(value)}
 
 
+def get_url_origin(url):
+    parsed_url = urlparse(url)
+    scheme = parsed_url.scheme.lower()
+    default_port = 443 if scheme == 'https' else 80 if scheme == 'http' else None
+    port = parsed_url.port
+    return scheme, parsed_url.hostname, port if port is not None else default_port
+
+
+class CredentialStrippingRedirectHandler(request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected_request = super().redirect_request(
+            req, fp, code, msg, headers, newurl
+        )
+        if redirected_request and get_url_origin(req.full_url) != get_url_origin(
+            redirected_request.full_url
+        ):
+            redirected_request.headers.clear()
+            redirected_request.unredirected_hdrs.clear()
+            for key, value in DEFAULT_REQUEST_HEADERS.items():
+                redirected_request.add_header(key, value)
+        return redirected_request
+
+
+def open_url(req):
+    return request.build_opener(CredentialStrippingRedirectHandler()).open(req)
+
+
 def render_jinja_template(template, params, global_functions):
     import jinja2
+    import jinja2.sandbox
 
-    e = jinja2.Environment()
+    e = jinja2.sandbox.SandboxedEnvironment()
+    e.globals.clear()
     e.globals.update(global_functions)
     return e.from_string(template).render(params)
 
@@ -80,8 +115,8 @@ def process_row(
         else {}
     )
 
-    req_headers.setdefault('User-Agent', 'GEFF 1.0')
-    req_headers.setdefault('Accept-Encoding', 'gzip')
+    for key, value in DEFAULT_REQUEST_HEADERS.items():
+        req_headers.setdefault(key, value)
 
     auth_template = decrypt_if_encrypted(auth) if auth else None
 
@@ -97,19 +132,26 @@ def process_row(
         req_json = None
 
     next_url: Optional[str] = req_url
+    req_origin = get_url_origin(req_url)
     row_data: List[Any] = []
     metadata: Optional[Any] = None
 
     LOG.debug('Starting pagination.')
     while next_url:
-        if auth:
+        same_origin = get_url_origin(next_url) == req_origin
+        request_headers = (
+            req_headers.copy() if same_origin else DEFAULT_REQUEST_HEADERS.copy()
+        )
+        request_data = data
+
+        if auth and same_origin:
             parsed_url = urlparse(next_url)
             auth = render_jinja_template(
                 auth_template,
                 {
                     'path': parsed_url.path,
                     'query': parsed_url.query,
-                    'method': method,
+                    'method': req_method,
                     'unixtime': int(time()),
                 },
                 {
@@ -147,20 +189,22 @@ def process_row(
             elif not auth_host:
                 raise ValueError(f"'auth' missing the 'host' key.")
             elif 'basic' in req_auth:
-                req_headers['Authorization'] = make_basic_header(req_auth['basic'])
+                request_headers['Authorization'] = make_basic_header(
+                    req_auth['basic']
+                )
             elif 'bearer' in req_auth:
-                req_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
+                request_headers['Authorization'] = f"Bearer {req_auth['bearer']}"
             elif 'authorization' in req_auth:
-                req_headers['authorization'] = req_auth['authorization']
+                request_headers['authorization'] = req_auth['authorization']
             elif 'headers' in req_auth:
-                req_headers.update(req_auth['headers'])
+                request_headers.update(req_auth['headers'])
             elif 'body' in req_auth:
                 if json:
                     raise ValueError(f"auth 'body' key and json param are both present")
                 if data:
                     raise ValueError(f"auth 'body' key and data param are both present")
                 else:
-                    data = (
+                    request_data = (
                         req_auth['body']
                         if isinstance(req_auth['body'], str)
                         else dumps(req_auth['body'])
@@ -170,10 +214,10 @@ def process_row(
         req = request.Request(
             next_url,
             method=req_method,
-            headers=req_headers,
+            headers=request_headers,
             data=(
-                data.encode()
-                if data is not None
+                request_data.encode()
+                if request_data is not None
                 else dumps(req_json).encode()
                 if req_json is not None
                 else None
@@ -182,7 +226,7 @@ def process_row(
         links_headers = None
 
         try:
-            res = request.urlopen(req)
+            res = open_url(req)
             links_headers = parse_header_links(
                 ','.join(res.headers.get_all('link', []))
             )

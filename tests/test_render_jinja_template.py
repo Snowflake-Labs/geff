@@ -4,6 +4,9 @@ from time import time
 from hashlib import sha256
 from hmac import new as new_hmac
 
+import pytest
+from jinja2.exceptions import SecurityError
+
 from lambda_src.drivers.process_https import render_jinja_template
 
 
@@ -31,3 +34,19 @@ def test_render_jinja_template():
             ),
         },
     )
+
+
+def test_render_jinja_template_blocks_unsafe_attribute_access():
+    def registered_function():
+        return None
+
+    template = "{{ registered_function.__globals__.__builtins__.eval('40 + 2') }}"
+
+    with pytest.raises(SecurityError):
+        render_jinja_template(
+            template, {}, {'registered_function': registered_function}
+        )
+
+
+def test_render_jinja_template_does_not_expose_default_globals():
+    assert render_jinja_template('{{ cycler is undefined }}', {}, {}) == 'True'
