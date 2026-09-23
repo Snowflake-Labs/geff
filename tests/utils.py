@@ -6,7 +6,7 @@ from email.message import EmailMessage
 
 @fixture
 def mock_urlopen(request):
-    with patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('lambda_src.drivers.process_https.open_url') as mock_urlopen:
         mock_urlopen.side_effect = request.param
         yield mock_urlopen
 
