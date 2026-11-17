@@ -1,0 +1,6 @@
+# Default owner for application code, tests, documentation, and repository configuration.
+* @sfc-gh-afedorov
+
+# Recent container and secrets manager changes.
+/Dockerfile @sfc-gh-bkou
+/lambda_src/vault.py @sfc-gh-afedorov @sfc-gh-bkou
