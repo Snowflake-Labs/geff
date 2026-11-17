@@ -1,5 +1,5 @@
 # Default owner for application code, tests, documentation, and repository configuration.
-* @sfc-gh-afedorov @sfc-gh-bkou @sfc-gh-pkommini
+* @sfc-gh-afedorov @sfc-gh-bkou
 
 # Recent container and secrets manager changes.
 /Dockerfile @sfc-gh-bkou
