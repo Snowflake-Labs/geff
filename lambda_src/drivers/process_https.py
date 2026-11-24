@@ -7,7 +7,7 @@ from io import BytesIO
 from json import JSONDecodeError, dumps, loads
 from re import match
 from time import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlparse
 from urllib import request
@@ -38,12 +38,13 @@ def parse_header_dict(value):
     return {k: v for k, v in parse_qsl(value)}
 
 
-def get_url_origin(url):
+def get_https_origin(url: str) -> Tuple[Optional[str], int]:
+    """Require HTTPS and return the normalized (host, port) origin."""
     parsed_url = urlparse(url)
-    scheme = parsed_url.scheme.lower()
-    default_port = 443 if scheme == 'https' else 80 if scheme == 'http' else None
+    if parsed_url.scheme != 'https':
+        raise ValueError('URL scheme must be HTTPS.')
     port = parsed_url.port
-    return scheme, parsed_url.hostname, port if port is not None else default_port
+    return parsed_url.hostname, port if port is not None else 443
 
 
 class CredentialStrippingRedirectHandler(request.HTTPRedirectHandler):
@@ -51,7 +52,7 @@ class CredentialStrippingRedirectHandler(request.HTTPRedirectHandler):
         redirected_request = super().redirect_request(
             req, fp, code, msg, headers, newurl
         )
-        if redirected_request and get_url_origin(req.full_url) != get_url_origin(
+        if redirected_request and get_https_origin(req.full_url) != get_https_origin(
             redirected_request.full_url
         ):
             redirected_request.headers.clear()
@@ -102,11 +103,9 @@ def process_row(
     if req_params:
         req_url += f'?{req_params}'
 
-    parsed_url = urlparse(req_url)
-    if parsed_url.scheme != 'https':
-        raise ValueError('URL scheme must be HTTPS.')
+    req_origin = get_https_origin(req_url)
+    req_host, _ = req_origin
 
-    req_host = parsed_url.hostname
     req_headers = (
         loads(headers)
         if headers.startswith('{')
@@ -132,13 +131,12 @@ def process_row(
         req_json = None
 
     next_url: Optional[str] = req_url
-    req_origin = get_url_origin(req_url)
     row_data: List[Any] = []
     metadata: Optional[Any] = None
 
     LOG.debug('Starting pagination.')
     while next_url:
-        same_origin = get_url_origin(next_url) == req_origin
+        same_origin = get_https_origin(next_url) == req_origin
         request_headers = (
             req_headers.copy() if same_origin else DEFAULT_REQUEST_HEADERS.copy()
         )

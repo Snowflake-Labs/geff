@@ -1,6 +1,8 @@
-from utils import mock_urlopen_with_responses, mock_response, mock_urlopen, Mock
-
+from unittest.mock import Mock, patch
 from urllib.request import Request
+
+from pytest import mark, raises
+from utils import mock_response, mock_urlopen, mock_urlopen_with_responses
 
 from lambda_src.drivers import process_https
 
@@ -141,7 +143,47 @@ def test_process_row_cross_origin_pagination_strips_auth_body(mock_urlopen):
     assert second_req.data is None
 
 
-def test_redirect_handler_strips_credentials_on_origin_change():
+@mark.parametrize(
+    'next_url',
+    [
+        'http://api.example.test/next',
+        'ftp://api.example.test/next',
+        'file:///example-next-page',
+    ],
+)
+def test_process_row_rejects_non_https_pagination(next_url):
+    response = mock_response(
+        {'Content-Type': 'application/json', 'Link': f'<{next_url}>; rel="next"'},
+        b'[1]',
+    )
+    with patch.object(process_https, 'open_url', return_value=response) as opener:
+        with raises(ValueError, match='URL scheme must be HTTPS'):
+            process_https.process_row(url='https://api.example.test/items')
+
+    opener.assert_called_once()
+
+
+@mark.parametrize(
+    'location', ['http://api.example.test/next', 'ftp://api.example.test/next']
+)
+def test_redirect_handler_rejects_non_https_targets(location):
+    response = mock_response({'Location': location}, b'')
+    req = Request('https://api.example.test/items')
+    req.timeout = 1
+    opener = Mock()
+    handler = process_https.CredentialStrippingRedirectHandler()
+    handler.add_parent(opener)
+
+    with raises(ValueError, match='URL scheme must be HTTPS'):
+        handler.http_error_302(req, response, 302, 'Found', response.headers)
+
+    opener.open.assert_not_called()
+
+
+@mark.parametrize(
+    'location', ['https://other.eg.com/items', 'https://api.eg.com:8443/items']
+)
+def test_redirect_handler_strips_credentials_on_origin_change(location):
     req = Request(
         'https://api.eg.com/items',
         headers={
@@ -154,7 +196,7 @@ def test_redirect_handler_strips_credentials_on_origin_change():
 
     redirected_req = (
         process_https.CredentialStrippingRedirectHandler().redirect_request(
-            req, None, 302, 'Found', {}, 'http://api.eg.com/items'
+            req, None, 302, 'Found', {}, location
         )
     )
 
@@ -164,16 +206,18 @@ def test_redirect_handler_strips_credentials_on_origin_change():
     }
 
 
-def test_redirect_handler_preserves_credentials_on_same_origin():
+@mark.parametrize('location', ['https://api.eg.com:443/next', '/next'])
+def test_redirect_handler_preserves_credentials_on_same_origin(location):
     req = Request(
         'https://api.eg.com/items',
         headers={'Authorization': 'Bearer auth-secret'},
     )
+    req.timeout = 1
+    response = mock_response({'Location': location}, b'')
+    opener = Mock()
+    handler = process_https.CredentialStrippingRedirectHandler()
+    handler.add_parent(opener)
+    handler.http_error_302(req, response, 302, 'Found', response.headers)
 
-    redirected_req = (
-        process_https.CredentialStrippingRedirectHandler().redirect_request(
-            req, None, 302, 'Found', {}, 'https://api.eg.com/next'
-        )
-    )
-
+    redirected_req = opener.open.call_args.args[0]
     assert get_request_headers(redirected_req)['authorization'] == 'Bearer auth-secret'
